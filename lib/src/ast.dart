@@ -1,3 +1,5 @@
+import 'package:collection/collection.dart';
+
 abstract class Visitor<T> {
   T visitAst(Ast value) =>
       throw UnimplementedError('${value.runtimeType} is not implemented');
@@ -7,15 +9,20 @@ abstract class Visitor<T> {
 }
 
 abstract class Ast {
+  const Ast();
+
   T visit<T>(Visitor<T> visitor) => visitor.visitAst(this);
 }
 
 abstract class Statement extends Ast {
+  const Statement();
+
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitStatement(this);
 }
 
 abstract class Expression extends Ast {
+  const Expression();
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitExpression(this);
 }
@@ -27,6 +34,17 @@ class Block extends Ast {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitBlock(this);
+
+  @override
+  late final int hashCode = Object.hashAll(statements);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Block &&
+        statements.length == other.statements.length &&
+        statements.whereIndexed((i, e) => e == other.statements[i]).length ==
+            statements.length;
+  }
 }
 
 class Assign extends Statement {
@@ -139,11 +157,23 @@ class InlineFunction extends Expression {
   InlineFunction(this.args, this.body);
 }
 
-class Nil extends Expression {}
+class Nil extends Expression {
+  static const _instance = Nil._();
+  const Nil._();
+  factory Nil() => _instance;
+}
 
 class Bool extends Expression {
   final bool value;
-  Bool(this.value);
+  const Bool(this.value);
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is Bool && value == other.value;
+  }
 }
 
 class Number extends Expression {

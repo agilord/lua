@@ -5,5 +5,5 @@ Supported features:
 - formatting code based on AST
 
 Planned features:
-- Lua code parser
+- Lua code parser (work started)
 - Lua code evaluator
