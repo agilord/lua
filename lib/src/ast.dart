@@ -4,8 +4,14 @@ abstract class Visitor<T> {
   T visitAst(Ast value) =>
       throw UnimplementedError('${value.runtimeType} is not implemented');
   T visitStatement(Statement value) => visitAst(value);
-  T visitExpression(Expression value) => visitAst(value);
+  T visitExpression(Expression value) => visitStatement(value);
   T visitBlock(Block value) => visitAst(value);
+  T visitVarRef(VarRef value) => visitExpression(value);
+  T visitNil(Nil value) => visitExpression(value);
+  T visitBool(Bool value) => visitExpression(value);
+  T visitNumber(Number value) => visitExpression(value);
+  T visitString(LuaString value) => visitExpression(value);
+  T visitTable(Table value) => visitExpression(value);
 }
 
 abstract class Ast {
@@ -21,7 +27,7 @@ abstract class Statement extends Ast {
   T visit<T>(Visitor<T> visitor) => visitor.visitStatement(this);
 }
 
-abstract class Expression extends Ast {
+abstract class Expression extends Statement {
   const Expression();
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitExpression(this);
@@ -160,7 +166,11 @@ class InlineFunction extends Expression {
 class Nil extends Expression {
   static const _instance = Nil._();
   const Nil._();
+
   factory Nil() => _instance;
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitNil(this);
 }
 
 class Bool extends Expression {
@@ -174,22 +184,61 @@ class Bool extends Expression {
   bool operator ==(Object other) {
     return other is Bool && value == other.value;
   }
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitBool(this);
 }
 
 class Number extends Expression {
   final num value;
   Number(this.value);
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is Number && value == other.value;
+  }
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitNumber(this);
 }
 
 class LuaString extends Expression {
   final String value;
   LuaString(this.value);
+
+  @override
+  int get hashCode => value.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is LuaString && value == other.value;
+  }
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitString(this);
 }
 
 class Table extends Expression {
   final List<Field> fields;
 
-  Table(this.fields);
+  const Table(this.fields);
+
+  @override
+  int get hashCode => Object.hashAll(fields);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Table &&
+        fields.length == other.fields.length &&
+        fields.whereIndexed((i, e) => e == other.fields[i]).length ==
+            fields.length;
+  }
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitTable(this);
 }
 
 class Field {
@@ -205,6 +254,17 @@ class Field {
     if (name != null && index != null) {
       throw ArgumentError('Only one of `name` or `index` must be set.');
     }
+  }
+
+  @override
+  int get hashCode => Object.hashAll([name, index, value]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Field &&
+        name == other.name &&
+        index == other.index &&
+        value == other.value;
   }
 }
 
@@ -234,5 +294,16 @@ class BinOp extends Expression {
 class VarRef extends Expression {
   final String name;
 
-  VarRef(this.name);
+  const VarRef(this.name);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitVarRef(this);
+
+  @override
+  int get hashCode => name.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is VarRef && name == other.name;
+  }
 }

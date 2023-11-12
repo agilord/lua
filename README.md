@@ -6,4 +6,4 @@ Supported features:
 
 Planned features:
 - Lua code parser (work started)
-- Lua code evaluator
+- Lua code/AST evaluator (work started)
