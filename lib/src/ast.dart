@@ -1,10 +1,15 @@
 import 'package:collection/collection.dart';
+import 'package:lua/src/evaluator.dart';
 
 abstract class Visitor<T> {
   T visitAst(Ast value) =>
       throw UnimplementedError('${value.runtimeType} is not implemented');
   T visitStatement(Statement value) => visitAst(value);
   T visitExpression(Expression value) => visitStatement(value);
+  T visitAnd(And value) => visitExpression(value);
+  T visitOr(Or value) => visitExpression(value);
+  T visitNot(Not value) => visitExpression(value);
+
   T visitBlock(Block value) => visitAst(value);
   T visitVarRef(VarRef value) => visitExpression(value);
   T visitNil(Nil value) => visitExpression(value);
@@ -12,6 +17,8 @@ abstract class Visitor<T> {
   T visitNumber(Number value) => visitExpression(value);
   T visitString(LuaString value) => visitExpression(value);
   T visitTable(Table value) => visitExpression(value);
+  T visitNegative(Negative value) => visitExpression(value);
+  T visitLength(Length value) => visitExpression(value);
 }
 
 abstract class Ast {
@@ -27,10 +34,44 @@ abstract class Statement extends Ast {
   T visit<T>(Visitor<T> visitor) => visitor.visitStatement(this);
 }
 
-abstract class Expression extends Statement {
+abstract class Expression<E> extends Statement {
   const Expression();
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitExpression(this);
+}
+
+abstract class Literal<E> extends Expression<E> {
+  const Literal();
+}
+
+extension BoolExpressionExt on Expression<bool> {
+  Expression<bool> not() => Not(this);
+
+  And and(Expression<bool> other) {
+    if (this is And) {
+      final t = this as And;
+      return And([...t.items, other]);
+    } else {
+      return And([this, other]);
+    }
+  }
+
+  Or or(Expression<bool> other) {
+    if (this is Or) {
+      final t = this as Or;
+      return Or([...t.items, other]);
+    } else {
+      return Or([this, other]);
+    }
+  }
+}
+
+extension NumExpressionExt on Expression<num> {
+  Negative negative() => Negative(this);
+}
+
+extension NumExt on num {
+  Number lua() => Number(this);
 }
 
 class Block extends Ast {
@@ -163,7 +204,7 @@ class InlineFunction extends Expression {
   InlineFunction(this.args, this.body);
 }
 
-class Nil extends Expression {
+class Nil extends Literal<Null> {
   static const _instance = Nil._();
   const Nil._();
 
@@ -173,7 +214,7 @@ class Nil extends Expression {
   T visit<T>(Visitor<T> visitor) => visitor.visitNil(this);
 }
 
-class Bool extends Expression {
+class Bool extends Literal<bool> {
   final bool value;
   const Bool(this.value);
 
@@ -189,7 +230,7 @@ class Bool extends Expression {
   T visit<T>(Visitor<T> visitor) => visitor.visitBool(this);
 }
 
-class Number extends Expression {
+class Number extends Literal<num> {
   final num value;
   Number(this.value);
 
@@ -205,7 +246,7 @@ class Number extends Expression {
   T visit<T>(Visitor<T> visitor) => visitor.visitNumber(this);
 }
 
-class LuaString extends Expression {
+class LuaString extends Literal<String> {
   final String value;
   LuaString(this.value);
 
@@ -221,7 +262,7 @@ class LuaString extends Expression {
   T visit<T>(Visitor<T> visitor) => visitor.visitString(this);
 }
 
-class Table extends Expression {
+class Table extends Expression<TableInstance> {
   final List<Field> fields;
 
   const Table(this.fields);
@@ -268,27 +309,96 @@ class Field {
   }
 }
 
-class Negative extends Expression {
-  final Expression value;
+class Negative extends Expression<num> {
+  final Expression<num> value;
   Negative(this.value);
+
+  @override
+  int get hashCode => value.hashCode + 1;
+
+  @override
+  bool operator ==(Object other) {
+    return other is Negative && value == other.value;
+  }
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitNegative(this);
 }
 
-class Not extends Expression {
-  final Expression value;
+class Not extends Expression<bool> {
+  final Expression<bool> value;
   Not(this.value);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitNot(this);
 }
 
-class Length extends Expression {
+class Length extends Expression<int> {
   final Expression value;
   Length(this.value);
+
+  @override
+  int get hashCode => value.hashCode + 2;
+
+  @override
+  bool operator ==(Object other) {
+    return other is Length && value == other.value;
+  }
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitLength(this);
 }
 
-class BinOp extends Expression {
+class And extends Expression<bool> {
+  final List<Expression<bool>> items;
+  And(this.items);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitAnd(this);
+}
+
+class Or extends Expression<bool> {
+  final List<Expression<bool>> items;
+
+  Or(this.items);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitOr(this);
+}
+
+class BinOp<E> extends Expression<E> {
   final Expression left;
   final String operator;
   final Expression right;
 
   BinOp(this.left, this.operator, this.right);
+
+  @override
+  late final hashCode = Object.hashAll([left, operator, right]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is BinOp &&
+        left == other.left &&
+        operator == other.operator &&
+        right == other.right;
+  }
+}
+
+enum Operator {
+  less,
+  lessEq,
+  greater,
+  greaterEq,
+  equals,
+  notEquals,
+  concatenate,
+  add,
+  substract,
+  multiply,
+  divide,
+  modulus,
+  exponent,
 }
 
 class VarRef extends Expression {

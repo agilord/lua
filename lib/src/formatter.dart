@@ -6,6 +6,14 @@ String format(Ast code) {
   return text.lines.join('\n');
 }
 
+extension FormatExt on Ast {
+  String format() {
+    final formatter = _LuaFormatter();
+    final text = visit(formatter);
+    return text.lines.join('\n');
+  }
+}
+
 class _Code {
   final List<String> lines;
 
@@ -148,43 +156,77 @@ class _LuaFormatter extends Visitor<_Code> {
   }
 
   @override
+  _Code visitNil(Nil value) => _Code.line('nil');
+
+  @override
+  _Code visitBool(Bool value) => _Code.line(value.value ? 'true' : 'false');
+
+  @override
+  _Code visitNumber(Number value) => _Code.line(value.value.toString());
+
+  @override
+  _Code visitString(LuaString value) => _Code.line(
+      '"${value.value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"');
+
+  @override
+  _Code visitNot(Not value) => value.value.visit(this).prefixFirst('not ');
+
+  @override
+  _Code visitVarRef(VarRef value) => _Code.line(value.name);
+
+  @override
+  _Code visitAnd(And value) {
+    return _Code.compose(
+        '',
+        value.items.map((e) => e is Literal
+            ? e.visit(this)
+            : e.visit(this).prefixFirst('(').postfixLast(')')),
+        ' and ',
+        '');
+  }
+
+  @override
+  _Code visitOr(Or value) {
+    return _Code.compose(
+        '',
+        value.items.map((e) => e is Literal
+            ? e.visit(this)
+            : e.visit(this).prefixFirst('(').postfixLast(')')),
+        ' or ',
+        '');
+  }
+
+  @override
+  _Code visitTable(Table value) {
+    var v = _Code.line('{');
+    for (var i = 0; i < value.fields.length; i++) {
+      if (i > 0) {
+        v = v.postfixLast(', ');
+      }
+      final field = value.fields[i];
+      if (field.index != null) {
+        v = v
+            .joinInline(_Code.line('['))
+            .joinInline(field.index!.visit(this))
+            .joinInline(_Code.line(']='));
+      } else if (field.name != null) {
+        v = v.postfixLast('${field.name}=');
+      }
+      v = v.joinInline(field.value.visit(this));
+    }
+    return v.postfixLast('}');
+  }
+
+  @override
+  _Code visitNegative(Negative value) =>
+      value.value.visit(this).prefixFirst('-');
+
+  @override
+  _Code visitLength(Length value) => value.value.visit(this).prefixFirst('#');
+
+  @override
   _Code visitExpression(Expression value) {
     switch (value) {
-      case Nil():
-        return _Code.line('nil');
-      case Bool():
-        return _Code.line(value.value ? 'true' : 'false');
-      case Number():
-        return _Code.line(value.value.toString());
-      case LuaString():
-        return _Code.line(
-            '"${value.value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"');
-      case Negative():
-        return value.value.visit(this).prefixFirst('-');
-      case Not():
-        return value.value.visit(this).prefixFirst('not ');
-      case Length():
-        return value.value.visit(this).prefixFirst('#');
-      case VarRef():
-        return _Code.line(value.name);
-      case Table():
-        var v = _Code.line('{');
-        for (var i = 0; i < value.fields.length; i++) {
-          if (i > 0) {
-            v = v.postfixLast(', ');
-          }
-          final field = value.fields[i];
-          if (field.index != null) {
-            v = v
-                .joinInline(_Code.line('['))
-                .joinInline(field.index!.visit(this))
-                .joinInline(_Code.line(']='));
-          } else if (field.name != null) {
-            v = v.postfixLast('${field.name}=');
-          }
-          v = v.joinInline(field.value.visit(this));
-        }
-        return v.postfixLast('}');
       case BinOp():
         return value.left
             .visit(this)

@@ -23,6 +23,16 @@ void main() {
         '{true, x=false, [3]=nil}',
       );
     });
+
+    test('bool expressions', () {
+      expect(And([Bool(true), Bool(false)]).format(), 'true and false');
+      expect(
+          And([
+            Bool(true),
+            Or([Bool(false)])
+          ]).format(),
+          'true and (false)');
+    });
   });
 
   group('statements', () {
