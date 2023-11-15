@@ -42,6 +42,10 @@ void main() {
       expect(3.lua().greaterThanOrEquals(2.lua()).evaluate(), true);
     });
 
+    test('concatenate', () {
+      expect(1.lua().concatenate('x'.lua()).evaluate(), '1x');
+    });
+
     test('integer operators', () {
       expect(2.lua().negative().evaluate(), -2);
       expect(Length(Table([Field(value: 1.lua())])).evaluate(), 1);

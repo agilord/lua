@@ -149,6 +149,11 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitConcatenate(Concatenate value) {
+    return value.values.map((e) => e.visit(this)).join('');
+  }
+
+  @override
   Object? visitLength(Length value) {
     final v = value.value.visit(this);
     if (v is TableInstance) {

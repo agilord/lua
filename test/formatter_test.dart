@@ -40,6 +40,10 @@ void main() {
       expect(1.lua().lessThan(2.lua()).format(), '1<2');
       expect(1.lua().lessThanOrEquals(2.lua()).format(), '1<=2');
     });
+
+    test('concatenate', () {
+      expect(Concatenate([1.lua(), 'x'.lua(), 2.lua()]).format(), '1.."x"..2');
+    });
   });
 
   group('statements', () {

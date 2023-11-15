@@ -15,6 +15,7 @@ abstract class Visitor<T> {
   T visitLessEq(LessEq value) => visitExpression(value);
   T visitGreater(Greater value) => visitExpression(value);
   T visitGreaterEq(GreaterEq value) => visitExpression(value);
+  T visitConcatenate(Concatenate value) => visitExpression(value);
 
   T visitBlock(Block value) => visitAst(value);
   T visitVarRef(VarRef value) => visitExpression(value);
@@ -75,6 +76,15 @@ extension BoolExpressionExt on Expression<bool> {
 extension ExpressionExt on Expression {
   Equals equals(Expression other) => Equals(this, other);
   NotEquals notEquals(Expression other) => NotEquals(this, other);
+
+  Concatenate concatenate(Expression other) {
+    if (this is Concatenate) {
+      final t = this as Concatenate;
+      return Concatenate([...t.values, other]);
+    } else {
+      return Concatenate([this, other]);
+    }
+  }
 }
 
 extension NumExpressionExt on Expression<num> {
@@ -92,6 +102,10 @@ extension BoolExt on bool {
 
 extension NumExt on num {
   Number lua() => Number(this);
+}
+
+extension StringExt on String {
+  LuaString lua() => LuaString(this);
 }
 
 class Block extends Ast {
@@ -463,6 +477,15 @@ class GreaterEq extends Expression<bool> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitGreaterEq(this);
+}
+
+class Concatenate extends Expression<String> {
+  final List<Expression> values;
+
+  Concatenate(this.values);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitConcatenate(this);
 }
 
 enum Operator {

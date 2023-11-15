@@ -249,6 +249,10 @@ class _LuaFormatter extends Visitor<_Code> {
       _visitBinOp(value.left, '>=', value.right);
 
   @override
+  _Code visitConcatenate(Concatenate value) =>
+      _Code.compose('', value.values.map((v) => v.visit(this)), '..', '');
+
+  @override
   _Code visitExpression(Expression value) {
     switch (value) {
       case BinOp():
