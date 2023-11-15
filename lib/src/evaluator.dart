@@ -111,6 +111,16 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitEquals(Equals value) {
+    return value.left.visit(this) == value.right.visit(this);
+  }
+
+  @override
+  Object? visitNotEquals(NotEquals value) {
+    return value.left.visit(this) != value.right.visit(this);
+  }
+
+  @override
   Object? visitLength(Length value) {
     final v = value.value.visit(this);
     if (v is TableInstance) {

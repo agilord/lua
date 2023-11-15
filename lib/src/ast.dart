@@ -9,6 +9,8 @@ abstract class Visitor<T> {
   T visitAnd(And value) => visitExpression(value);
   T visitOr(Or value) => visitExpression(value);
   T visitNot(Not value) => visitExpression(value);
+  T visitEquals(Equals value) => visitExpression(value);
+  T visitNotEquals(NotEquals value) => visitExpression(value);
 
   T visitBlock(Block value) => visitAst(value);
   T visitVarRef(VarRef value) => visitExpression(value);
@@ -66,8 +68,17 @@ extension BoolExpressionExt on Expression<bool> {
   }
 }
 
+extension ExpressionExt on Expression {
+  Equals equals(Expression other) => Equals(this, other);
+  NotEquals notEquals(Expression other) => NotEquals(this, other);
+}
+
 extension NumExpressionExt on Expression<num> {
   Negative negative() => Negative(this);
+}
+
+extension BoolExt on bool {
+  Bool lua() => Bool(this);
 }
 
 extension NumExt on num {
@@ -383,6 +394,26 @@ class BinOp<E> extends Expression<E> {
         operator == other.operator &&
         right == other.right;
   }
+}
+
+class Equals extends Expression<bool> {
+  final Expression left;
+  final Expression right;
+
+  Equals(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitEquals(this);
+}
+
+class NotEquals extends Expression<bool> {
+  final Expression left;
+  final Expression right;
+
+  NotEquals(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitNotEquals(this);
 }
 
 enum Operator {

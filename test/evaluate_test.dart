@@ -28,6 +28,9 @@ void main() {
       expect(Bool(false).or(Bool(true)).evaluate(), true);
       expect(Bool(false).or(Bool(false)).evaluate(), false);
       expect(Bool(true).not().evaluate(), false);
+      expect(true.lua().equals(false.lua()).evaluate(), false);
+      expect(2.lua().equals(2.lua()).evaluate(), true);
+      expect(2.lua().notEquals(2.lua()).evaluate(), false);
     });
 
     test('integer operators', () {
