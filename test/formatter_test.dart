@@ -32,8 +32,13 @@ void main() {
             Or([Bool(false)])
           ]).format(),
           'true and (false)');
+    });
+
+    test('comparison', () {
       expect(true.lua().equals(1.lua()).format(), 'true==1');
       expect(true.lua().notEquals(1.lua()).format(), 'true~=1');
+      expect(1.lua().lessThan(2.lua()).format(), '1<2');
+      expect(1.lua().lessThanOrEquals(2.lua()).format(), '1<=2');
     });
   });
 

@@ -11,6 +11,10 @@ abstract class Visitor<T> {
   T visitNot(Not value) => visitExpression(value);
   T visitEquals(Equals value) => visitExpression(value);
   T visitNotEquals(NotEquals value) => visitExpression(value);
+  T visitLess(Less value) => visitExpression(value);
+  T visitLessEq(LessEq value) => visitExpression(value);
+  T visitGreater(Greater value) => visitExpression(value);
+  T visitGreaterEq(GreaterEq value) => visitExpression(value);
 
   T visitBlock(Block value) => visitAst(value);
   T visitVarRef(VarRef value) => visitExpression(value);
@@ -75,6 +79,11 @@ extension ExpressionExt on Expression {
 
 extension NumExpressionExt on Expression<num> {
   Negative negative() => Negative(this);
+  Less lessThan(Expression<num> other) => Less(this, other);
+  LessEq lessThanOrEquals(Expression<num> other) => LessEq(this, other);
+  Greater greaterThan(Expression<num> other) => Greater(this, other);
+  GreaterEq greaterThanOrEquals(Expression<num> other) =>
+      GreaterEq(this, other);
 }
 
 extension BoolExt on bool {
@@ -416,13 +425,47 @@ class NotEquals extends Expression<bool> {
   T visit<T>(Visitor<T> visitor) => visitor.visitNotEquals(this);
 }
 
+class Less extends Expression<bool> {
+  final Expression left;
+  final Expression right;
+
+  Less(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitLess(this);
+}
+
+class LessEq extends Expression<bool> {
+  final Expression left;
+  final Expression right;
+
+  LessEq(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitLessEq(this);
+}
+
+class Greater extends Expression<bool> {
+  final Expression left;
+  final Expression right;
+
+  Greater(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitGreater(this);
+}
+
+class GreaterEq extends Expression<bool> {
+  final Expression left;
+  final Expression right;
+
+  GreaterEq(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitGreaterEq(this);
+}
+
 enum Operator {
-  less,
-  lessEq,
-  greater,
-  greaterEq,
-  equals,
-  notEquals,
   concatenate,
   add,
   substract,

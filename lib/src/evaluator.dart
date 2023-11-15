@@ -121,6 +121,34 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitLess(Less value) {
+    return (value.left.visit(this) as Comparable)
+            .compareTo(value.right.visit(this)) <
+        0;
+  }
+
+  @override
+  Object? visitLessEq(LessEq value) {
+    return (value.left.visit(this) as Comparable)
+            .compareTo(value.right.visit(this)) <=
+        0;
+  }
+
+  @override
+  Object? visitGreater(Greater value) {
+    return (value.left.visit(this) as Comparable)
+            .compareTo(value.right.visit(this)) >
+        0;
+  }
+
+  @override
+  Object? visitGreaterEq(GreaterEq value) {
+    return (value.left.visit(this) as Comparable)
+            .compareTo(value.right.visit(this)) >=
+        0;
+  }
+
+  @override
   Object? visitLength(Length value) {
     final v = value.value.visit(this);
     if (v is TableInstance) {

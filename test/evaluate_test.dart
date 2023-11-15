@@ -28,9 +28,18 @@ void main() {
       expect(Bool(false).or(Bool(true)).evaluate(), true);
       expect(Bool(false).or(Bool(false)).evaluate(), false);
       expect(Bool(true).not().evaluate(), false);
+    });
+
+    test('comparisons', () {
       expect(true.lua().equals(false.lua()).evaluate(), false);
       expect(2.lua().equals(2.lua()).evaluate(), true);
       expect(2.lua().notEquals(2.lua()).evaluate(), false);
+      expect(1.lua().lessThan(2.lua()).evaluate(), true);
+      expect(2.lua().lessThanOrEquals(2.lua()).evaluate(), true);
+      expect(3.lua().lessThanOrEquals(2.lua()).evaluate(), false);
+      expect(1.lua().greaterThan(2.lua()).evaluate(), false);
+      expect(2.lua().greaterThanOrEquals(2.lua()).evaluate(), true);
+      expect(3.lua().greaterThanOrEquals(2.lua()).evaluate(), true);
     });
 
     test('integer operators', () {

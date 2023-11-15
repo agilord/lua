@@ -224,17 +224,29 @@ class _LuaFormatter extends Visitor<_Code> {
   @override
   _Code visitLength(Length value) => value.value.visit(this).prefixFirst('#');
 
-  @override
-  _Code visitEquals(Equals value) => value.left
-      .visit(this)
-      .postfixLast('==')
-      .joinInline(value.right.visit(this));
+  _Code _visitBinOp(Expression left, String operator, Expression right) =>
+      left.visit(this).postfixLast(operator).joinInline(right.visit(this));
 
   @override
-  _Code visitNotEquals(NotEquals value) => value.left
-      .visit(this)
-      .postfixLast('~=')
-      .joinInline(value.right.visit(this));
+  _Code visitEquals(Equals value) => _visitBinOp(value.left, '==', value.right);
+
+  @override
+  _Code visitNotEquals(NotEquals value) =>
+      _visitBinOp(value.left, '~=', value.right);
+
+  @override
+  _Code visitLess(Less value) => _visitBinOp(value.left, '<', value.right);
+
+  @override
+  _Code visitLessEq(LessEq value) => _visitBinOp(value.left, '<=', value.right);
+
+  @override
+  _Code visitGreater(Greater value) =>
+      _visitBinOp(value.left, '>', value.right);
+
+  @override
+  _Code visitGreaterEq(GreaterEq value) =>
+      _visitBinOp(value.left, '>=', value.right);
 
   @override
   _Code visitExpression(Expression value) {
