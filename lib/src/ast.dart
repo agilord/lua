@@ -32,6 +32,14 @@ abstract class Visitor<T> {
   T visitTable(Table value) => visitExpression(value);
   T visitNegative(Negative value) => visitExpression(value);
   T visitLength(Length value) => visitExpression(value);
+
+  T visitBreak(Break value) => visitStatement(value);
+  T visitReturn(Return value) => visitStatement(value);
+  T visitAssign(Assign value) => visitStatement(value);
+  T visitCall(Call value) => visitStatement(value);
+  T visitDo(Do value) => visitStatement(value);
+  T visitWhile(While value) => visitStatement(value);
+  T visitRepeat(Repeat value) => visitStatement(value);
 }
 
 abstract class Ast {
@@ -142,6 +150,7 @@ class Block extends Ast {
   final List<Statement> statements;
 
   Block(this.statements);
+  Block.empty() : statements = [];
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitBlock(this);
@@ -158,6 +167,11 @@ class Block extends Ast {
   }
 }
 
+extension BlockExt on Block {
+  Block add(Statement other) => Block([...statements, other]);
+  Block addAll(Iterable<Statement> other) => Block([...statements, ...other]);
+}
+
 class Assign extends Statement {
   final bool isLocal;
   final List<String> names;
@@ -168,29 +182,55 @@ class Assign extends Statement {
     this.values, {
     this.isLocal = false,
   });
+
+  factory Assign.single(
+    String name,
+    Expression value, {
+    bool isLocal = false,
+  }) =>
+      Assign(
+        [name],
+        [value],
+        isLocal: isLocal,
+      );
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitAssign(this);
 }
 
 class Call extends Statement implements Expression {
   final String name;
   final List<Expression> args;
   Call(this.name, this.args);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitCall(this);
 }
 
 class Do extends Statement {
   final Block block;
   Do(this.block);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitDo(this);
 }
 
 class While extends Statement {
   final Expression condition;
   final Block block;
   While(this.condition, this.block);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitWhile(this);
 }
 
 class Repeat extends Statement {
   final Block block;
   final Expression condition;
   Repeat(this.block, this.condition);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitRepeat(this);
 }
 
 class If extends Statement {
@@ -255,10 +295,16 @@ class FunctionDef extends Statement {
 class Return extends Statement {
   final List<Expression>? values;
   Return({this.values});
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitReturn(this);
 }
 
 class Break extends Statement {
   Break();
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitBreak(this);
 }
 
 class InlineFunction extends Expression {
@@ -557,7 +603,7 @@ class Exponent extends Expression<num> {
   T visit<T>(Visitor<T> visitor) => visitor.visitExponent(this);
 }
 
-class VarRef extends Expression {
+class VarRef<E> extends Expression<E> {
   final String name;
 
   const VarRef(this.name);

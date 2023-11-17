@@ -74,40 +74,55 @@ class _LuaFormatter extends Visitor<_Code> {
   }
 
   @override
+  _Code visitBreak(Break value) => _Code.line('break');
+
+  @override
+  _Code visitReturn(Return value) {
+    if (value.values == null || value.values!.isEmpty) {
+      return _Code.line('return');
+    }
+    return _Code.compose(
+        'return ', value.values!.map((e) => e.visit(this)), ', ', '');
+  }
+
+  @override
+  _Code visitAssign(Assign value) {
+    final namesJoined = value.names.join(', ');
+    return _Code.compose(
+        value.isLocal ? 'local $namesJoined=' : '$namesJoined=',
+        value.values.map((e) => e.visit(this)),
+        ', ',
+        '');
+  }
+
+  @override
+  _Code visitCall(Call value) => _Code.compose(
+      '${value.name}(', value.args.map((e) => e.visit(this)), ', ', ')');
+
+  @override
+  _Code visitDo(Do value) =>
+      _Code.withLines(['do', ...value.block.visit(this).indent().lines, 'end']);
+
+  @override
+  _Code visitWhile(While value) {
+    return _Code.line('while ')
+        .joinInline(value.condition.visit(this))
+        .postfixLast(' do ')
+        .joinDistinct(value.block.visit(this).indent())
+        .joinDistinct(_Code.line('end'));
+  }
+
+  @override
+  _Code visitRepeat(Repeat value) {
+    return _Code.line('repeat')
+        .joinDistinct(value.block.visit(this).indent())
+        .joinDistinct(
+            _Code.line('until ').joinInline(value.condition.visit(this)));
+  }
+
+  @override
   _Code visitStatement(Statement value) {
     switch (value) {
-      case Break():
-        return _Code.line('break');
-      case Return():
-        if (value.values == null || value.values!.isEmpty) {
-          return _Code.line('return');
-        }
-        return _Code.compose(
-            'return ', value.values!.map((e) => e.visit(this)), ', ', '');
-      case Assign():
-        final namesJoined = value.names.join(', ');
-        return _Code.compose(
-            value.isLocal ? 'local $namesJoined=' : '$namesJoined=',
-            value.values.map((e) => e.visit(this)),
-            ', ',
-            '');
-      case Call():
-        return _Code.compose(
-            '${value.name}(', value.args.map((e) => e.visit(this)), ', ', ')');
-      case Do():
-        return _Code.withLines(
-            ['do', ...value.block.visit(this).indent().lines, 'end']);
-      case While():
-        return _Code.line('while ')
-            .joinInline(value.condition.visit(this))
-            .postfixLast(' do ')
-            .joinDistinct(value.block.visit(this).indent())
-            .joinDistinct(_Code.line('end'));
-      case Repeat():
-        return _Code.line('repeat')
-            .joinDistinct(value.block.visit(this).indent())
-            .joinDistinct(
-                _Code.line('until ').joinInline(value.condition.visit(this)));
       case If():
         var v = _Code.line('if ')
             .joinInline(value.condition.visit(this))

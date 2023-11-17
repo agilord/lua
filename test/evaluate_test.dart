@@ -59,5 +59,42 @@ void main() {
       expect(2.lua().negative().evaluate(), -2);
       expect(Length(Table([Field(value: 1.lua())])).evaluate(), 1);
     });
+
+    test('assign and ref', () {
+      expect(
+        Block([
+          Assign.single('a', 2.lua(), isLocal: true),
+          Assign.single('b', 1.lua(), isLocal: true),
+          Assign(['a', 'b'], [VarRef('b'), VarRef('a')]),
+        ]).evaluate(),
+        [1, 2],
+      );
+    });
+
+    test('return from block', () {
+      expect(
+          Block([
+            Return(values: [1.lua(), 2.lua()]),
+          ]).evaluate(),
+          [1, 2]);
+    });
+
+    test('while', () {
+      expect(
+          While(
+            VarRef<int>('a').lessThan(5.lua()),
+            Block([Assign.single('a', VarRef<int>('a').plus(1.lua()))]),
+          ).evaluate(env: LuaEnv(variables: {'a': 1})),
+          5);
+    });
+
+    test('repeat', () {
+      expect(
+          Repeat(
+            Block([Assign.single('a', VarRef<int>('a').plus(1.lua()))]),
+            VarRef<int>('a').lessThan(5.lua()),
+          ).evaluate(env: LuaEnv(variables: {'a': 1})),
+          5);
+    });
   });
 }

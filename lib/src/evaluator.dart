@@ -32,6 +32,10 @@ class _Context extends Visitor<Object?> {
     required this.parent,
   });
 
+  _Context _fork() {
+    return _Context(parent: this);
+  }
+
   Object? lookup(String name) {
     if (vars.containsKey(name)) {
       return vars[name];
@@ -44,13 +48,29 @@ class _Context extends Visitor<Object?> {
 
   @override
   Object? visitBlock(Block value) {
+    Object? lastValue;
     for (final s in value.statements) {
-      if (s is Return) {
-        return (s.values ?? const []).map((e) => e.visit(this)).toList();
+      try {
+        lastValue = s.visit(this);
+      } on _ReturnException catch (e) {
+        return e.value;
       }
-      s.visit(this);
     }
-    return [];
+    return lastValue;
+  }
+
+  @override
+  Object? visitReturn(Return value) {
+    if (value.values == null || value.values!.isEmpty) {
+      throw _ReturnException(null);
+    }
+    throw _ReturnException(
+        (value.values ?? const []).map((e) => e.visit(this)).toList());
+  }
+
+  @override
+  Object? visitBreak(Break value) {
+    throw _BreakException();
   }
 
   @override
@@ -190,12 +210,82 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitDo(Do value) {
+    return value.block.visit(_fork());
+  }
+
+  @override
+  Object? visitAssign(Assign value) {
+    final maxIndex = value.values.length - 1;
+    final values = value.names
+        .mapIndexed(
+            (i, _) => i <= maxIndex ? value.values[i].visit(this) : null)
+        .toList();
+    for (int i = 0; i < value.names.length; i++) {
+      final v = values[i];
+      _set(value.isLocal, value.names[i], v);
+    }
+    return values.length == 1 ? values.single : values;
+  }
+
+  @override
+  Object? visitWhile(While value) {
+    Object? lastValue;
+    for (;;) {
+      final expr = value.condition.visit(this);
+      if (_isFalse(expr)) {
+        return lastValue;
+      }
+      try {
+        lastValue = value.block.visit(_fork());
+      } on _BreakException {
+        return lastValue;
+      }
+    }
+  }
+
+  @override
+  Object? visitRepeat(Repeat value) {
+    Object? lastValue;
+    for (;;) {
+      try {
+        lastValue = value.block.visit(_fork());
+      } on _BreakException {
+        return lastValue;
+      }
+      final expr = value.condition.visit(this);
+      if (_isFalse(expr)) {
+        return lastValue;
+      }
+    }
+  }
+
+  @override
   Object? visitLength(Length value) {
     final v = value.value.visit(this);
     if (v is TableInstance) {
       return v.fields.length;
     }
     throw UnimplementedError();
+  }
+
+  void _set(bool isLocal, String name, Object? value) {
+    if (isLocal) {
+      if (vars.containsKey(name)) {
+        throw ArgumentError('Cannot override local scope "$name".');
+      }
+      vars[name] = value;
+    } else {
+      _Context? c = this;
+      while (c != null) {
+        if (c.vars.containsKey(name)) {
+          c.vars[name] = value;
+          return;
+        }
+        c = c.parent;
+      }
+      throw ArgumentError('Unknown reference "$name".');
+    }
   }
 }
 
@@ -265,3 +355,11 @@ class EvaluationException implements Exception {
   @override
   String toString() => 'EvaluationException: $message';
 }
+
+class _ReturnException implements Exception {
+  final Object? value;
+
+  _ReturnException(this.value);
+}
+
+class _BreakException implements Exception {}
