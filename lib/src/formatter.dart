@@ -253,14 +253,24 @@ class _LuaFormatter extends Visitor<_Code> {
       _Code.compose('', value.values.map((v) => v.visit(this)), '..', '');
 
   @override
-  _Code visitExpression(Expression value) {
-    switch (value) {
-      case BinOp():
-        return value.left
-            .visit(this)
-            .postfixLast(value.operator)
-            .joinInline(value.right.visit(this));
-    }
-    return super.visitExpression(value);
-  }
+  _Code visitAdd(Add value) =>
+      _Code.compose('', value.values.map((e) => e.visit(this)), '+', '');
+
+  @override
+  _Code visitSubstract(Substract value) =>
+      _visitBinOp(value.left, '-', value.right);
+
+  @override
+  _Code visitMultiply(Multiply value) =>
+      _Code.compose('', value.values.map((e) => e.visit(this)), '*', '');
+
+  @override
+  _Code visitDivide(Divide value) => _visitBinOp(value.left, '/', value.right);
+
+  @override
+  _Code visitModulo(Modulo value) => _visitBinOp(value.left, '%', value.right);
+
+  @override
+  _Code visitExponent(Exponent value) =>
+      _visitBinOp(value.left, '^', value.right);
 }

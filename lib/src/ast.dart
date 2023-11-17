@@ -16,6 +16,12 @@ abstract class Visitor<T> {
   T visitGreater(Greater value) => visitExpression(value);
   T visitGreaterEq(GreaterEq value) => visitExpression(value);
   T visitConcatenate(Concatenate value) => visitExpression(value);
+  T visitAdd(Add value) => visitExpression(value);
+  T visitSubstract(Substract value) => visitExpression(value);
+  T visitMultiply(Multiply value) => visitExpression(value);
+  T visitDivide(Divide value) => visitExpression(value);
+  T visitModulo(Modulo value) => visitExpression(value);
+  T visitExponent(Exponent value) => visitExpression(value);
 
   T visitBlock(Block value) => visitAst(value);
   T visitVarRef(VarRef value) => visitExpression(value);
@@ -94,6 +100,30 @@ extension NumExpressionExt on Expression<num> {
   Greater greaterThan(Expression<num> other) => Greater(this, other);
   GreaterEq greaterThanOrEquals(Expression<num> other) =>
       GreaterEq(this, other);
+
+  Add plus(Expression<num> other) {
+    if (this is Add) {
+      final t = this as Add;
+      return Add([...t.values, other]);
+    } else {
+      return Add([this, other]);
+    }
+  }
+
+  Substract minus(Expression<num> other) => Substract(this, other);
+
+  Multiply multiply(Expression<num> other) {
+    if (this is Multiply) {
+      final t = this as Multiply;
+      return Multiply([...t.values, other]);
+    } else {
+      return Multiply([this, other]);
+    }
+  }
+
+  Divide divide(Expression<num> other) => Divide(this, other);
+  Modulo modulo(Expression<num> other) => Modulo(this, other);
+  Exponent exponent(Expression<num> other) => Exponent(this, other);
 }
 
 extension BoolExt on bool {
@@ -400,25 +430,6 @@ class Or extends Expression<bool> {
   T visit<T>(Visitor<T> visitor) => visitor.visitOr(this);
 }
 
-class BinOp<E> extends Expression<E> {
-  final Expression left;
-  final String operator;
-  final Expression right;
-
-  BinOp(this.left, this.operator, this.right);
-
-  @override
-  late final hashCode = Object.hashAll([left, operator, right]);
-
-  @override
-  bool operator ==(Object other) {
-    return other is BinOp &&
-        left == other.left &&
-        operator == other.operator &&
-        right == other.right;
-  }
-}
-
 class Equals extends Expression<bool> {
   final Expression left;
   final Expression right;
@@ -488,14 +499,62 @@ class Concatenate extends Expression<String> {
   T visit<T>(Visitor<T> visitor) => visitor.visitConcatenate(this);
 }
 
-enum Operator {
-  concatenate,
-  add,
-  substract,
-  multiply,
-  divide,
-  modulus,
-  exponent,
+class Add extends Expression<num> {
+  final List<Expression> values;
+
+  Add(this.values);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitAdd(this);
+}
+
+class Substract extends Expression<num> {
+  final Expression left;
+  final Expression right;
+
+  Substract(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitSubstract(this);
+}
+
+class Multiply extends Expression<num> {
+  final List<Expression> values;
+
+  Multiply(this.values);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitMultiply(this);
+}
+
+class Divide extends Expression<num> {
+  final Expression left;
+  final Expression right;
+
+  Divide(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitDivide(this);
+}
+
+class Modulo extends Expression<num> {
+  final Expression left;
+  final Expression right;
+
+  Modulo(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitModulo(this);
+}
+
+class Exponent extends Expression<num> {
+  final Expression left;
+  final Expression right;
+
+  Exponent(this.left, this.right);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitExponent(this);
 }
 
 class VarRef extends Expression {

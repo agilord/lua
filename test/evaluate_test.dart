@@ -46,6 +46,15 @@ void main() {
       expect(1.lua().concatenate('x'.lua()).evaluate(), '1x');
     });
 
+    test('maths', () {
+      expect(1.lua().plus(2.4.lua()).evaluate(), 3.4);
+      expect(1.lua().minus(2.4.lua()).evaluate(), -1.4);
+      expect(2.lua().multiply(2.4.lua()).evaluate(), 4.8);
+      expect(2.4.lua().divide(2.lua()).evaluate(), 1.2);
+      expect(4.lua().modulo(3.lua()).evaluate(), 1);
+      expect(2.lua().exponent(3.lua()).evaluate(), 8);
+    });
+
     test('integer operators', () {
       expect(2.lua().negative().evaluate(), -2);
       expect(Length(Table([Field(value: 1.lua())])).evaluate(), 1);

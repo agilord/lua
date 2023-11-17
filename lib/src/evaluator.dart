@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:collection/collection.dart';
 import 'package:lua/src/ast.dart';
 
@@ -151,6 +153,40 @@ class _Context extends Visitor<Object?> {
   @override
   Object? visitConcatenate(Concatenate value) {
     return value.values.map((e) => e.visit(this)).join('');
+  }
+
+  @override
+  Object? visitAdd(Add value) {
+    return value.values
+        .map((e) => e.visit(this) as num)
+        .reduce((sum, e) => sum + e);
+  }
+
+  @override
+  Object? visitSubstract(Substract value) {
+    return (value.left.visit(this) as num) - (value.right.visit(this) as num);
+  }
+
+  @override
+  Object? visitMultiply(Multiply value) {
+    return value.values
+        .map((e) => e.visit(this) as num)
+        .reduce((prod, e) => prod * e);
+  }
+
+  @override
+  Object? visitDivide(Divide value) {
+    return (value.left.visit(this) as num) / (value.right.visit(this) as num);
+  }
+
+  @override
+  Object? visitModulo(Modulo value) {
+    return (value.left.visit(this) as num) % (value.right.visit(this) as num);
+  }
+
+  @override
+  Object? visitExponent(Exponent value) {
+    return pow(value.left.visit(this) as num, value.right.visit(this) as num);
   }
 
   @override

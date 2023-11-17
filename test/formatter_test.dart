@@ -44,6 +44,15 @@ void main() {
     test('concatenate', () {
       expect(Concatenate([1.lua(), 'x'.lua(), 2.lua()]).format(), '1.."x"..2');
     });
+
+    test('maths', () {
+      expect(1.lua().plus(2.4.lua()).format(), '1+2.4');
+      expect(1.lua().minus(2.4.lua()).format(), '1-2.4');
+      expect(1.lua().multiply(2.4.lua()).format(), '1*2.4');
+      expect(1.lua().divide(2.4.lua()).format(), '1/2.4');
+      expect(1.lua().modulo(2.lua()).format(), '1%2');
+      expect(2.lua().exponent(3.lua()).format(), '2^3');
+    });
   });
 
   group('statements', () {
@@ -160,7 +169,9 @@ void main() {
             'add',
             ['a', 'b'],
             Block([
-              Return(values: [BinOp(VarRef('a'), '+', VarRef('b'))]),
+              Return(values: [
+                Add([VarRef('a'), VarRef('b')])
+              ]),
             ]),
           ),
         ),
