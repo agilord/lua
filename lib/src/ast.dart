@@ -40,6 +40,10 @@ abstract class Visitor<T> {
   T visitDo(Do value) => visitStatement(value);
   T visitWhile(While value) => visitStatement(value);
   T visitRepeat(Repeat value) => visitStatement(value);
+  T visitIf(If value) => visitStatement(value);
+  T visitFor(For value) => visitStatement(value);
+  T visitForEach(ForEach value) => visitStatement(value);
+  T visitFunctionDef(FunctionDef value) => visitStatement(value);
 }
 
 abstract class Ast {
@@ -245,6 +249,9 @@ class If extends Statement {
     this.elseIfs,
     this.elseBlock,
   });
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitIf(this);
 }
 
 class ElseIf {
@@ -268,6 +275,9 @@ class For extends Statement {
     this.increment,
     required this.block,
   });
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitFor(this);
 }
 
 class ForEach extends Statement {
@@ -276,6 +286,9 @@ class ForEach extends Statement {
   final Block block;
 
   ForEach(this.names, this.values, this.block);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitForEach(this);
 }
 
 class FunctionDef extends Statement {
@@ -290,6 +303,9 @@ class FunctionDef extends Statement {
     this.body, {
     this.isLocal = false,
   });
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitFunctionDef(this);
 }
 
 class Return extends Statement {

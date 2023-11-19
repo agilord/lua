@@ -121,53 +121,58 @@ class _LuaFormatter extends Visitor<_Code> {
   }
 
   @override
-  _Code visitStatement(Statement value) {
-    switch (value) {
-      case If():
-        var v = _Code.line('if ')
-            .joinInline(value.condition.visit(this))
-            .postfixLast(' then')
-            .joinDistinct(value.block.visit(this).indent());
-        if (value.elseIfs != null) {
-          for (final e in value.elseIfs!) {
-            v = v.joinDistinct(_Code.line('elseif ')
-                .joinInline(e.condition.visit(this))
-                .joinDistinct(e.block.visit(this).indent()));
-          }
-        }
-        if (value.elseBlock != null) {
-          v = v.joinDistinct(_Code.line('else')
-              .joinDistinct(value.elseBlock!.visit(this).indent()));
-        }
-        return v.joinDistinct(_Code.line('end'));
-      case For():
-        var v = _Code.line('for ${value.name} = ')
-            .joinInline(value.init.visit(this))
-            .postfixLast(', ')
-            .joinInline(value.stop.visit(this));
-        if (value.increment != null) {
-          v = v.postfixLast(', ').joinInline(value.increment!.visit(this));
-        }
-        v = v
-            .postfixLast(' do')
-            .joinDistinct(value.block.visit(this).indent())
-            .joinDistinct(_Code.line('end'));
-        return v;
-      case ForEach():
-        return _Code.compose('for ${value.names.join(', ')} in ',
-                value.values.map((e) => e.visit(this)), ', ', ' do')
-            .joinDistinct(value.block.visit(this).indent())
-            .joinDistinct(_Code.line('end'));
-      case FunctionDef():
-        var v = _Code.line('function ${value.name}(${value.args.join(', ')})');
-        if (value.isLocal) {
-          v = v.prefixFirst('local ');
-        }
-        return v
-            .joinDistinct(value.body.visit(this).indent())
-            .joinDistinct(_Code.line('end'));
+  _Code visitIf(If value) {
+    var v = _Code.line('if ')
+        .joinInline(value.condition.visit(this))
+        .postfixLast(' then')
+        .joinDistinct(value.block.visit(this).indent());
+    if (value.elseIfs != null) {
+      for (final e in value.elseIfs!) {
+        v = v.joinDistinct(_Code.line('elseif ')
+            .joinInline(e.condition.visit(this))
+            .joinDistinct(e.block.visit(this).indent()));
+      }
     }
-    return super.visitStatement(value);
+    if (value.elseBlock != null) {
+      v = v.joinDistinct(_Code.line('else')
+          .joinDistinct(value.elseBlock!.visit(this).indent()));
+    }
+    return v.joinDistinct(_Code.line('end'));
+  }
+
+  @override
+  _Code visitFor(For value) {
+    var v = _Code.line('for ${value.name} = ')
+        .joinInline(value.init.visit(this))
+        .postfixLast(', ')
+        .joinInline(value.stop.visit(this));
+    if (value.increment != null) {
+      v = v.postfixLast(', ').joinInline(value.increment!.visit(this));
+    }
+    v = v
+        .postfixLast(' do')
+        .joinDistinct(value.block.visit(this).indent())
+        .joinDistinct(_Code.line('end'));
+    return v;
+  }
+
+  @override
+  _Code visitForEach(ForEach value) {
+    return _Code.compose('for ${value.names.join(', ')} in ',
+            value.values.map((e) => e.visit(this)), ', ', ' do')
+        .joinDistinct(value.block.visit(this).indent())
+        .joinDistinct(_Code.line('end'));
+  }
+
+  @override
+  _Code visitFunctionDef(FunctionDef value) {
+    var v = _Code.line('function ${value.name}(${value.args.join(', ')})');
+    if (value.isLocal) {
+      v = v.prefixFirst('local ');
+    }
+    return v
+        .joinDistinct(value.body.visit(this).indent())
+        .joinDistinct(_Code.line('end'));
   }
 
   @override
