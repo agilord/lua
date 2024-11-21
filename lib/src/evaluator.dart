@@ -183,7 +183,7 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
-  Object? visitSubstract(Substract value) {
+  Object? visitSubtract(Subtract value) {
     return (value.left.visit(this) as num) - (value.right.visit(this) as num);
   }
 
