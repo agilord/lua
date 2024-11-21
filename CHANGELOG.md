@@ -1,3 +1,8 @@
+## 0.2.0
+
+- **Breaking change**:
+  - fixed spelling in classes and methods: `s/Substract/Subtract/`
+
 ## 0.1.1
 
 - Started working on `petitparser`-based parsing.
