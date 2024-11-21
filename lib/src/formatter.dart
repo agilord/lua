@@ -277,7 +277,7 @@ class _LuaFormatter extends Visitor<_Code> {
       _Code.compose('', value.values.map((e) => e.visit(this)), '+', '');
 
   @override
-  _Code visitSubstract(Substract value) =>
+  _Code visitSubtract(Subtract value) =>
       _visitBinOp(value.left, '-', value.right);
 
   @override

@@ -17,7 +17,7 @@ abstract class Visitor<T> {
   T visitGreaterEq(GreaterEq value) => visitExpression(value);
   T visitConcatenate(Concatenate value) => visitExpression(value);
   T visitAdd(Add value) => visitExpression(value);
-  T visitSubstract(Substract value) => visitExpression(value);
+  T visitSubtract(Subtract value) => visitExpression(value);
   T visitMultiply(Multiply value) => visitExpression(value);
   T visitDivide(Divide value) => visitExpression(value);
   T visitModulo(Modulo value) => visitExpression(value);
@@ -122,7 +122,7 @@ extension NumExpressionExt on Expression<num> {
     }
   }
 
-  Substract minus(Expression<num> other) => Substract(this, other);
+  Subtract minus(Expression<num> other) => Subtract(this, other);
 
   Multiply multiply(Expression<num> other) {
     if (this is Multiply) {
@@ -570,14 +570,14 @@ class Add extends Expression<num> {
   T visit<T>(Visitor<T> visitor) => visitor.visitAdd(this);
 }
 
-class Substract extends Expression<num> {
+class Subtract extends Expression<num> {
   final Expression left;
   final Expression right;
 
-  Substract(this.left, this.right);
+  Subtract(this.left, this.right);
 
   @override
-  T visit<T>(Visitor<T> visitor) => visitor.visitSubstract(this);
+  T visit<T>(Visitor<T> visitor) => visitor.visitSubtract(this);
 }
 
 class Multiply extends Expression<num> {
