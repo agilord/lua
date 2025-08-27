@@ -187,7 +187,46 @@ void main() {
     });
   });
 
-  group('samples', () {
-    test('sample #1', () {});
+  group('arithmetic expressions', () {
+    test('integers and decimals', () {
+      expect(format(Number(0)), '0');
+      expect(format(Number(42)), '42');
+      expect(format(Number(3.14)), '3.14');
+      expect(format(Number(-5)), '-5');
+    });
+
+    test('string literals', () {
+      expect(format(LuaString('hello')), '"hello"');
+      expect(format(LuaString('')), '""');
+      expect(format(LuaString('test')), '"test"');
+    });
+
+    test('variable references', () {
+      expect(format(VarRef('x')), 'x');
+      expect(format(VarRef('variable')), 'variable');
+      expect(format(VarRef('test123')), 'test123');
+    });
+
+    test('single assignments', () {
+      expect(format(Assign.single('x', Number(1))), 'x=1');
+      expect(format(Assign.single('y', Bool(true))), 'y=true');
+      expect(format(Assign.single('z', LuaString('hello'))), 'z="hello"');
+      expect(format(Assign.single('var', VarRef('other'))), 'var=other');
+    });
+
+    test('local assignments', () {
+      expect(format(Assign.single('x', Number(1), isLocal: true)), 'local x=1');
+      expect(format(Assign.single('y', Bool(false), isLocal: true)),
+          'local y=false');
+    });
+
+    test('function calls', () {
+      expect(format(Call('print', [])), 'print()');
+      expect(format(Call('func', [Number(1)])), 'func(1)');
+      expect(format(Call('test', [Number(1), LuaString('hello')])),
+          'test(1, "hello")');
+      expect(format(Call('complex', [VarRef('x'), Bool(true), Nil()])),
+          'complex(x, true, nil)');
+    });
   });
 }

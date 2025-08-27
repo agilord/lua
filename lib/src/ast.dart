@@ -200,6 +200,21 @@ class Assign extends Statement {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitAssign(this);
+
+  @override
+  int get hashCode => Object.hashAll([isLocal, ...names, ...values]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Assign &&
+        isLocal == other.isLocal &&
+        names.length == other.names.length &&
+        values.length == other.values.length &&
+        names.whereIndexed((i, e) => e == other.names[i]).length ==
+            names.length &&
+        values.whereIndexed((i, e) => e == other.values[i]).length ==
+            values.length;
+  }
 }
 
 class Call extends Statement implements Expression {
@@ -209,6 +224,17 @@ class Call extends Statement implements Expression {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitCall(this);
+
+  @override
+  int get hashCode => Object.hashAll([name, ...args]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Call &&
+        name == other.name &&
+        args.length == other.args.length &&
+        args.whereIndexed((i, e) => e == other.args[i]).length == args.length;
+  }
 }
 
 class Do extends Statement {

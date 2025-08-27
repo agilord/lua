@@ -3,6 +3,9 @@ description: Lua language utilities in Dart.
 version: 0.2.0
 repository: https://github.com/agilord/lua
 
+topics:
+  - lua
+
 environment:
   sdk: ^3.1.0
 

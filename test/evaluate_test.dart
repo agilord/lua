@@ -97,4 +97,96 @@ void main() {
           5);
     });
   });
+
+  group('arithmetic expressions', () {
+    test('numbers evaluation', () {
+      expect(Number(0).evaluate(), 0);
+      expect(Number(42).evaluate(), 42);
+      expect(Number(3.14).evaluate(), 3.14);
+      expect(Number(-5).evaluate(), -5);
+    });
+
+    test('strings evaluation', () {
+      expect(LuaString('hello').evaluate(), 'hello');
+      expect(LuaString('').evaluate(), '');
+      expect(LuaString('test').evaluate(), 'test');
+    });
+
+    test('variable references with environment', () {
+      final env = LuaEnv(variables: {'x': 42, 'name': 'test'});
+      expect(VarRef('x').evaluate(env: env), 42);
+      expect(VarRef('name').evaluate(env: env), 'test');
+    });
+
+    test('variable reference error for unknown variable', () {
+      expect(
+        () => VarRef('unknown').evaluate(),
+        throwsA(isA<EvaluationException>()),
+      );
+    });
+
+    test('local variable assignment', () {
+      final result = Assign.single('x', Number(42), isLocal: true).evaluate();
+      expect(result, 42);
+    });
+
+    test('multiple variable assignment', () {
+      final result =
+          Assign(['a', 'b'], [Number(1), Number(2)], isLocal: true).evaluate();
+      expect(result, [1, 2]);
+    });
+
+    test('assignment with fewer values than names', () {
+      final result =
+          Assign(['a', 'b', 'c'], [Number(1)], isLocal: true).evaluate();
+      expect(result, [1, null, null]);
+    });
+
+    test('variable assignment and reference', () {
+      final block = Block([
+        Assign.single('x', Number(10), isLocal: true),
+        VarRef('x'),
+      ]);
+      expect(block.evaluate(), 10);
+    });
+
+    test('complex variable operations', () {
+      final block = Block([
+        Assign.single('a', Number(5), isLocal: true),
+        Assign.single('b', Number(3), isLocal: true),
+        Add([VarRef('a'), VarRef('b')]),
+      ]);
+      expect(block.evaluate(), 8);
+    });
+
+    test('function call throws not implemented', () {
+      expect(
+        () => Call('print', []).evaluate(),
+        throwsA(isA<EvaluationException>()),
+      );
+
+      expect(
+        () =>
+            Call('unknown_function', [Number(1), LuaString('test')]).evaluate(),
+        throwsA(isA<EvaluationException>()),
+      );
+    });
+
+    test('assignment scoping', () {
+      final env = LuaEnv(variables: {'global': 'initial'});
+
+      // Try to assign to non-existent variable (should throw)
+      expect(
+        () => Assign.single('nonexistent', Number(42)).evaluate(env: env),
+        throwsA(isA<ArgumentError>()),
+      );
+
+      // Local assignment should work
+      expect(
+        Assign.single('local_var', Number(42), isLocal: true)
+            .evaluate(env: env),
+        42,
+      );
+    });
+  });
 }

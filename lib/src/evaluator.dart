@@ -229,6 +229,12 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitCall(Call value) {
+    // For now, just throw an exception for unknown function calls
+    throw EvaluationException('Function "${value.name}" is not implemented');
+  }
+
+  @override
   Object? visitWhile(While value) {
     Object? lastValue;
     for (;;) {
