@@ -189,4 +189,199 @@ void main() {
       );
     });
   });
+
+  group('table evaluation', () {
+    test('empty table', () {
+      expect(Table([]).evaluate(), TableInstance());
+    });
+
+    test('array-style tables', () {
+      expect(Table([Field(value: Number(1))]).evaluate(),
+          TableInstance.fromMap({1: 1}));
+      expect(
+          Table([Field(value: Number(1)), Field(value: Number(2))]).evaluate(),
+          TableInstance.fromMap({1: 1, 2: 2}));
+      expect(
+          Table([
+            Field(value: Number(42)),
+            Field(value: LuaString('hello')),
+            Field(value: Bool(true))
+          ]).evaluate(),
+          TableInstance.fromMap({1: 42, 2: 'hello', 3: true}));
+    });
+
+    test('named field tables', () {
+      expect(Table([Field(name: 'a', value: Number(1))]).evaluate(),
+          TableInstance.fromMap({'a': 1}));
+      expect(
+          Table([
+            Field(name: 'name', value: LuaString('test')),
+            Field(name: 'age', value: Number(25))
+          ]).evaluate(),
+          TableInstance.fromMap({'name': 'test', 'age': 25}));
+    });
+
+    test('indexed field tables', () {
+      expect(
+          Table([Field(index: Number(1), value: LuaString('first'))])
+              .evaluate(),
+          TableInstance.fromMap({1: 'first'}));
+      expect(
+          Table([
+            Field(index: LuaString('key1'), value: Number(1)),
+            Field(index: LuaString('key2'), value: Number(2))
+          ]).evaluate(),
+          TableInstance.fromMap({'key1': 1, 'key2': 2}));
+    });
+
+    test('mixed table syntax', () {
+      expect(
+          Table([
+            Field(value: Number(1)),
+            Field(name: 'a', value: Number(2)),
+            Field(index: Number(3), value: LuaString('third'))
+          ]).evaluate(),
+          TableInstance.fromMap({1: 1, 'a': 2, 3: 'third'}));
+
+      expect(
+          Table([
+            Field(value: LuaString('first')),
+            Field(value: LuaString('second')),
+            Field(name: 'named', value: Number(42)),
+            Field(index: LuaString('key'), value: Bool(true))
+          ]).evaluate(),
+          TableInstance.fromMap(
+              {1: 'first', 2: 'second', 'named': 42, 'key': true}));
+    });
+
+    test('nested tables', () {
+      expect(Table([Field(value: Table([]))]).evaluate(),
+          TableInstance.fromMap({1: TableInstance()}));
+
+      final inner1 = TableInstance.fromMap({1: 1});
+      final inner2 = TableInstance.fromMap({1: 2});
+      expect(
+          Table([
+            Field(value: Table([Field(value: Number(1))])),
+            Field(value: Table([Field(value: Number(2))]))
+          ]).evaluate(),
+          TableInstance.fromMap({1: inner1, 2: inner2}));
+
+      final nestedTable = TableInstance.fromMap({'value': 42});
+      expect(
+          Table([
+            Field(
+                name: 'inner',
+                value: Table([Field(name: 'value', value: Number(42))]))
+          ]).evaluate(),
+          TableInstance.fromMap({'inner': nestedTable}));
+    });
+
+    test('table with variable references', () {
+      final env = LuaEnv(
+          variables: {'x': 10, 'y': 'hello', 'key': 'mykey', 'value': 99});
+
+      expect(Table([Field(value: VarRef('x'))]).evaluate(env: env),
+          TableInstance.fromMap({1: 10}));
+
+      expect(Table([Field(name: 'a', value: VarRef('y'))]).evaluate(env: env),
+          TableInstance.fromMap({'a': 'hello'}));
+
+      expect(
+          Table([Field(index: VarRef('key'), value: VarRef('value'))])
+              .evaluate(env: env),
+          TableInstance.fromMap({'mykey': 99}));
+    });
+
+    test('table assignments', () {
+      final result = Assign.single('x', Table([]), isLocal: true).evaluate();
+      expect(result, TableInstance());
+
+      final block = Block([
+        Assign.single(
+            'config',
+            Table([
+              Field(name: 'name', value: LuaString('app')),
+              Field(name: 'version', value: Number(1))
+            ]),
+            isLocal: true),
+        VarRef('config')
+      ]);
+      expect(block.evaluate(),
+          TableInstance.fromMap({'name': 'app', 'version': 1}));
+    });
+
+    test('table length operation', () {
+      expect(Length(Table([])).evaluate(), 0);
+      expect(Length(Table([Field(value: Number(1))])).evaluate(), 1);
+      expect(
+          Length(Table([
+            Field(value: Number(1)),
+            Field(value: Number(2)),
+            Field(value: Number(3))
+          ])).evaluate(),
+          3);
+
+      // Length only counts fields, not distinguished by type
+      expect(
+          Length(Table([
+            Field(value: Number(1)),
+            Field(name: 'a', value: Number(2)),
+            Field(index: LuaString('key'), value: Number(3))
+          ])).evaluate(),
+          3);
+    });
+
+    test('complex table expressions', () {
+      final env = LuaEnv(variables: {'multiplier': 2});
+
+      final block = Block([
+        Assign.single(
+            'data',
+            Table([
+              Field(
+                  name: 'values',
+                  value: Table([
+                    Field(value: Number(1)),
+                    Field(value: Number(2)),
+                    Field(value: Number(3))
+                  ])),
+              Field(
+                  name: 'config',
+                  value: Table(
+                      [Field(name: 'scale', value: VarRef('multiplier'))]))
+            ]),
+            isLocal: true),
+        VarRef('data')
+      ]);
+
+      final expectedInnerValues = TableInstance.fromMap({1: 1, 2: 2, 3: 3});
+      final expectedInnerConfig = TableInstance.fromMap({'scale': 2});
+      final expectedResult = TableInstance.fromMap(
+          {'values': expectedInnerValues, 'config': expectedInnerConfig});
+
+      expect(block.evaluate(env: env), expectedResult);
+    });
+
+    test('table equality', () {
+      // Two identical empty tables
+      final table1 = Table([]).evaluate();
+      final table2 = Table([]).evaluate();
+      expect(table1, table2);
+
+      // Two identical tables with values
+      final table3 =
+          Table([Field(name: 'a', value: Number(1)), Field(value: Number(2))])
+              .evaluate();
+      final table4 =
+          Table([Field(name: 'a', value: Number(1)), Field(value: Number(2))])
+              .evaluate();
+      expect(table3, table4);
+
+      // Different tables
+      final table5 = Table([Field(value: Number(1))]).evaluate();
+      final table6 = Table([Field(value: Number(2))]).evaluate();
+      expect(table5, isNot(table6));
+    });
+  });
 }

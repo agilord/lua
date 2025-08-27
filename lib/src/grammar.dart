@@ -31,6 +31,7 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(boolFalse),
         ref0(number),
         ref0(string),
+        ref0(table),
         ref0(varRef),
         ref0(call),
         (char('(').trim() & ref0(expression) & char(')').trim())
@@ -60,7 +61,33 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser<VarRef> varRef() => token(ref0(name)).map((value) => VarRef(value));
 
   Parser<String> name() => allowedChars().plusString();
-  Parser<String> allowedChars() => anyCharExcept('[]():<!=>".\'+-*/% \t\n');
+  Parser<String> allowedChars() => anyCharExcept('[](){}:<!=>".\'+-*/% \t\n,');
+
+  Parser<Table> table() => (char('{').trim() & ref0(fieldList) & char('}'))
+      .map((value) => Table(value[1] as List<Field>));
+
+  Parser<List<Field>> fieldList() => ref0(field)
+      .plusSeparated(char(',').trim())
+      .optional()
+      .map((value) => value?.elements ?? <Field>[]);
+
+  Parser<Field> field() => <Parser<Field>>[
+        // Indexed field: [expr] = value
+        (char('[').trim() &
+                ref0(expression) &
+                char(']').trim() &
+                char('=').trim() &
+                ref0(expression))
+            .map((value) => Field(
+                index: value[1] as Expression, value: value[4] as Expression)),
+        // Named field: name = value
+        (ref0(name) & char('=').trim() & ref0(expression)).map((value) =>
+            Field(name: value[0] as String, value: value[2] as Expression)),
+        // Array-style field: value (must come last)
+        ref0(expression).map((value) => Field(value: value)),
+      ].toChoiceParser();
+
+  Parser<String> identifier() => pattern('a-zA-Z_').plus().flatten().trim();
 
   Parser<Nil> nil() => token('nil'.toParser()).map((value) => Nil());
   Parser<Bool> boolTrue() =>

@@ -229,4 +229,99 @@ void main() {
           'complex(x, true, nil)');
     });
   });
+
+  group('table formatting', () {
+    test('empty table', () {
+      expect(format(Table([])), '{}');
+    });
+
+    test('array-style tables', () {
+      expect(format(Table([Field(value: Number(1))])), '{1}');
+      expect(format(Table([Field(value: Number(1)), Field(value: Number(2))])),
+          '{1, 2}');
+      expect(
+          format(Table([
+            Field(value: Number(1)),
+            Field(value: LuaString('hello')),
+            Field(value: Bool(true))
+          ])),
+          '{1, "hello", true}');
+    });
+
+    test('named field tables', () {
+      expect(format(Table([Field(name: 'a', value: Number(1))])), '{a=1}');
+      expect(
+          format(Table([
+            Field(name: 'name', value: LuaString('test')),
+            Field(name: 'age', value: Number(25))
+          ])),
+          '{name="test", age=25}');
+    });
+
+    test('indexed field tables', () {
+      expect(
+          format(Table([Field(index: Number(1), value: LuaString('first'))])),
+          '{[1]="first"}');
+      expect(
+          format(Table([Field(index: VarRef('key'), value: VarRef('value'))])),
+          '{[key]=value}');
+      expect(
+          format(Table([
+            Field(index: LuaString('key1'), value: Number(1)),
+            Field(index: LuaString('key2'), value: Number(2))
+          ])),
+          '{["key1"]=1, ["key2"]=2}');
+    });
+
+    test('mixed table syntax', () {
+      expect(
+          format(Table([
+            Field(value: Number(1)),
+            Field(name: 'a', value: Number(2)),
+            Field(index: Number(3), value: LuaString('third'))
+          ])),
+          '{1, a=2, [3]="third"}');
+    });
+
+    test('nested tables', () {
+      expect(format(Table([Field(value: Table([]))])), '{{}}');
+      expect(
+          format(Table([
+            Field(value: Table([])),
+            Field(value: Table([Field(value: Number(1))]))
+          ])),
+          '{{}, {1}}');
+      expect(
+          format(Table([
+            Field(
+                name: 'inner',
+                value: Table([Field(name: 'value', value: Number(42))]))
+          ])),
+          '{inner={value=42}}');
+    });
+
+    test('table assignments', () {
+      expect(format(Assign.single('x', Table([]))), 'x={}');
+      expect(
+          format(Assign.single(
+              'config',
+              Table([
+                Field(name: 'name', value: LuaString('app')),
+                Field(name: 'version', value: Number(1))
+              ]))),
+          'config={name="app", version=1}');
+    });
+
+    test('table with variables', () {
+      expect(format(Table([Field(value: VarRef('x'))])), '{x}');
+      expect(format(Table([Field(name: 'a', value: VarRef('y'))])), '{a=y}');
+      expect(
+          format(Table([
+            Field(value: VarRef('first')),
+            Field(name: 'second', value: VarRef('value')),
+            Field(index: VarRef('key'), value: VarRef('val'))
+          ])),
+          '{first, second=value, [key]=val}');
+    });
+  });
 }

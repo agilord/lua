@@ -1,7 +1,8 @@
 ## 0.2.0
 
 **New features**:
- - arithmetic expressions 
+ - arithmetic expressions
+ - table expressions
 
 **Breaking changes**:
  - fixed spelling in classes and methods: `s/Substract/Subtract/`
