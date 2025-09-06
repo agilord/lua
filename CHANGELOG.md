@@ -1,7 +1,7 @@
 ## 0.2.0
 
 **New features**:
- - arithmetic expressions
+ - arithmetic expressions with precendence checks
  - table literal and expressions
  - control statements
 

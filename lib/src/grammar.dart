@@ -29,7 +29,7 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(callStatement),
       ].toChoiceParser().map((value) => value);
 
-  Parser<Expression> expression() => ref0(postfixExpression);
+  Parser<Expression> expression() => ref0(orExpression);
 
   Parser<Expression> postfixExpression() {
     return ref0(atomicExpression)
@@ -63,6 +63,172 @@ class LuaGrammarDefinition extends GrammarDefinition {
       Expression result = value[0] as Expression;
       for (final fn in value[1] as List) {
         result = (fn as Function)(result);
+      }
+      return result;
+    });
+  }
+
+  // Precedence levels from lowest to highest
+
+  // Level 1: or (logical or)
+  Parser<Expression> orExpression() {
+    return ref0(andExpression)
+        .plusSeparated(token('or'.toParser()))
+        .map((value) {
+      if (value.elements.length == 1) return value.elements.single;
+      return Or(value.elements.cast<Expression>());
+    });
+  }
+
+  // Level 2: and (logical and)
+  Parser<Expression> andExpression() {
+    return ref0(comparisonExpression)
+        .plusSeparated(token('and'.toParser()))
+        .map((value) {
+      if (value.elements.length == 1) return value.elements.single;
+      return And(value.elements.cast<Expression>());
+    });
+  }
+
+  // Level 3: ==, ~=, <, <=, >, >= (comparison)
+  Parser<Expression> comparisonExpression() {
+    return ref0(concatenationExpression)
+        .seq((token('=='.toParser()) |
+                token('~='.toParser()) |
+                token('<='.toParser()) |
+                token('>='.toParser()) |
+                token('<'.toParser()) |
+                token('>'.toParser()))
+            .seq(ref0(concatenationExpression))
+            .optional())
+        .map((value) {
+      final left = value[0] as Expression;
+      final right = value[1] as List?;
+      if (right == null) return left;
+
+      final op = right[0] as String;
+      final rightExpr = right[1] as Expression;
+
+      switch (op) {
+        case '==':
+          return Equals(left, rightExpr);
+        case '~=':
+          return NotEquals(left, rightExpr);
+        case '<':
+          return Less(left, rightExpr);
+        case '<=':
+          return LessEq(left, rightExpr);
+        case '>':
+          return Greater(left, rightExpr);
+        case '>=':
+          return GreaterEq(left, rightExpr);
+        default:
+          throw FormatException('Unknown comparison operator: $op');
+      }
+    });
+  }
+
+  // Level 4: .. (concatenation - right associative)
+  Parser<Expression> concatenationExpression() {
+    return ref0(additiveExpression)
+        .plusSeparated(token('..'.toParser()))
+        .map((value) {
+      if (value.elements.length == 1) return value.elements.single;
+      // Right associative - build tree from right to left
+      Expression result = value.elements.last;
+      for (int i = value.elements.length - 2; i >= 0; i--) {
+        result = Concatenate([value.elements[i], result]);
+      }
+      return result;
+    });
+  }
+
+  // Level 5: +, - (addition, subtraction)
+  Parser<Expression> additiveExpression() {
+    return ref0(multiplicativeExpression)
+        .seq((char('+').trim() | char('-').trim())
+            .seq(ref0(multiplicativeExpression))
+            .star())
+        .map((value) {
+      Expression result = value[0] as Expression;
+      final ops = value[1] as List;
+
+      for (final List op in ops) {
+        final operator = op[0] as String;
+        final right = op[1] as Expression;
+
+        if (operator == '+') {
+          result = Add([result, right]);
+        } else {
+          result = Subtract(result, right);
+        }
+      }
+      return result;
+    });
+  }
+
+  // Level 6: *, /, % (multiplication, division, modulo)
+  Parser<Expression> multiplicativeExpression() {
+    return ref0(unaryExpression)
+        .seq((char('*').trim() | char('/').trim() | char('%').trim())
+            .seq(ref0(unaryExpression))
+            .star())
+        .map((value) {
+      Expression result = value[0] as Expression;
+      final ops = value[1] as List;
+
+      for (final List op in ops) {
+        final operator = op[0] as String;
+        final right = op[1] as Expression;
+
+        switch (operator) {
+          case '*':
+            result = Multiply([result, right]);
+            break;
+          case '/':
+            result = Divide(result, right);
+            break;
+          case '%':
+            result = Modulo(result, right);
+            break;
+        }
+      }
+      return result;
+    });
+  }
+
+  // Level 7: not, -, # (unary operators)
+  Parser<Expression> unaryExpression() {
+    return (token('not'.toParser()) | char('-').trim() | char('#').trim())
+        .optional()
+        .seq(ref0(exponentiationExpression))
+        .map((value) {
+      final op = value[0] as String?;
+      final expr = value[1] as Expression;
+
+      if (op == null) return expr;
+
+      switch (op) {
+        case 'not':
+          return Not(expr);
+        case '-':
+          return Negative(expr);
+        case '#':
+          return Length(expr);
+        default:
+          return expr;
+      }
+    });
+  }
+
+  // Level 8: ^ (exponentiation - right associative)
+  Parser<Expression> exponentiationExpression() {
+    return ref0(postfixExpression).plusSeparated(char('^').trim()).map((value) {
+      if (value.elements.length == 1) return value.elements.single;
+      // Right associative - build tree from right to left
+      Expression result = value.elements.last;
+      for (int i = value.elements.length - 2; i >= 0; i--) {
+        result = Exponent(value.elements[i], result);
       }
       return result;
     });

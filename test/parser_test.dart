@@ -114,7 +114,179 @@ void main() {
 
     test('complex table indexing expressions', () {
       expect(parseExpr('({})[1]'), Index(Table([]), Number(1)));
-      // Note: arithmetic expressions in index not yet supported due to operator precedence
+      expect(parseExpr('t[x + y]'),
+          Index(VarRef('t'), Add([VarRef('x'), VarRef('y')])));
+    });
+  });
+
+  group('operator precedence', () {
+    final grammar = LuaGrammarDefinition();
+    final exprParser = grammar.buildFrom(grammar.expression());
+    Expression parseExpr(String input) => exprParser.parse(input).value;
+
+    test('arithmetic precedence - multiplication before addition', () {
+      expect(
+          parseExpr('2 + 3 * 4'),
+          Add([
+            Number(2),
+            Multiply([Number(3), Number(4)])
+          ]));
+      expect(
+          parseExpr('2 * 3 + 4'),
+          Add([
+            Multiply([Number(2), Number(3)]),
+            Number(4)
+          ]));
+    });
+
+    test('arithmetic precedence - division before subtraction', () {
+      expect(parseExpr('10 - 8 / 2'),
+          Subtract(Number(10), Divide(Number(8), Number(2))));
+      expect(parseExpr('10 / 2 - 1'),
+          Subtract(Divide(Number(10), Number(2)), Number(1)));
+    });
+
+    test('arithmetic precedence - modulo same as multiplication', () {
+      expect(parseExpr('10 % 3 + 1'),
+          Add([Modulo(Number(10), Number(3)), Number(1)]));
+      expect(parseExpr('10 + 3 % 2'),
+          Add([Number(10), Modulo(Number(3), Number(2))]));
+    });
+
+    test('arithmetic precedence - exponentiation before multiplication', () {
+      expect(parseExpr('2 * 3 ^ 4'),
+          Multiply([Number(2), Exponent(Number(3), Number(4))]));
+      expect(parseExpr('2 ^ 3 * 4'),
+          Multiply([Exponent(Number(2), Number(3)), Number(4)]));
+    });
+
+    test('arithmetic precedence - unary minus before addition', () {
+      expect(parseExpr('-2 + 3'), Add([Negative(Number(2)), Number(3)]));
+      expect(parseExpr('2 + -3'), Add([Number(2), Negative(Number(3))]));
+    });
+
+    test('arithmetic associativity - left associative for +, -, *, /, %', () {
+      expect(
+          parseExpr('1 + 2 + 3'),
+          Add([
+            Add([Number(1), Number(2)]),
+            Number(3)
+          ]));
+      expect(parseExpr('1 - 2 - 3'),
+          Subtract(Subtract(Number(1), Number(2)), Number(3)));
+      expect(
+          parseExpr('2 * 3 * 4'),
+          Multiply([
+            Multiply([Number(2), Number(3)]),
+            Number(4)
+          ]));
+      expect(parseExpr('8 / 4 / 2'),
+          Divide(Divide(Number(8), Number(4)), Number(2)));
+    });
+
+    test('arithmetic associativity - right associative for ^', () {
+      expect(parseExpr('2 ^ 3 ^ 4'),
+          Exponent(Number(2), Exponent(Number(3), Number(4))));
+    });
+
+    test('parentheses override precedence', () {
+      expect(
+          parseExpr('(2 + 3) * 4'),
+          Multiply([
+            Add([Number(2), Number(3)]),
+            Number(4)
+          ]));
+      expect(
+          parseExpr('2 * (3 + 4)'),
+          Multiply([
+            Number(2),
+            Add([Number(3), Number(4)])
+          ]));
+    });
+
+    test('comparison precedence - comparison before logical and', () {
+      expect(parseExpr('1 < 2 and 3 > 2'),
+          And([Less(Number(1), Number(2)), Greater(Number(3), Number(2))]));
+      expect(
+          parseExpr('x == y and a ~= b'),
+          And([
+            Equals(VarRef('x'), VarRef('y')),
+            NotEquals(VarRef('a'), VarRef('b'))
+          ]));
+    });
+
+    test('comparison precedence - comparison after arithmetic', () {
+      expect(parseExpr('1 + 2 < 3 * 4'),
+          Less(Add([Number(1), Number(2)]), Multiply([Number(3), Number(4)])));
+      expect(
+          parseExpr('x * 2 >= y - 1'),
+          GreaterEq(Multiply([VarRef('x'), Number(2)]),
+              Subtract(VarRef('y'), Number(1))));
+    });
+
+    test('logical precedence - and before or', () {
+      expect(
+          parseExpr('true or false and true'),
+          Or([
+            Bool(true),
+            And([Bool(false), Bool(true)])
+          ]));
+      expect(
+          parseExpr('a or b and c'),
+          Or([
+            VarRef('a'),
+            And([VarRef('b'), VarRef('c')])
+          ]));
+    });
+
+    test('logical precedence - not before and/or', () {
+      expect(
+          parseExpr('not true and false'), And([Not(Bool(true)), Bool(false)]));
+      expect(parseExpr('not a or b'), Or([Not(VarRef('a')), VarRef('b')]));
+    });
+
+    test('concatenation precedence - before comparison', () {
+      expect(
+          parseExpr('"a" .. "b" == "ab"'),
+          Equals(
+              Concatenate([LuaString('a'), LuaString('b')]), LuaString('ab')));
+    });
+
+    test('concatenation associativity - right associative', () {
+      expect(
+          parseExpr('"a" .. "b" .. "c"'),
+          Concatenate([
+            LuaString('a'),
+            Concatenate([LuaString('b'), LuaString('c')])
+          ]));
+    });
+
+    test('length operator precedence - before arithmetic', () {
+      expect(parseExpr('#t + 1'), Add([Length(VarRef('t')), Number(1)]));
+      expect(parseExpr('1 + #t'), Add([Number(1), Length(VarRef('t'))]));
+    });
+
+    test('complex mixed precedence', () {
+      // not x and y or z == w + v * u ^ 2
+      expect(
+          parseExpr('not x and y or z == w + v * u ^ 2'),
+          Or([
+            And([Not(VarRef('x')), VarRef('y')]),
+            Equals(
+                VarRef('z'),
+                Add([
+                  VarRef('w'),
+                  Multiply([VarRef('v'), Exponent(VarRef('u'), Number(2))])
+                ]))
+          ]));
+    });
+
+    test('postfix operators have highest precedence', () {
+      expect(parseExpr('t[1] + 2'),
+          Add([Index(VarRef('t'), Number(1)), Number(2)]));
+      expect(parseExpr('obj.field * 3'),
+          Multiply([FieldAccess(VarRef('obj'), 'field'), Number(3)]));
+      expect(parseExpr('func() ^ 2'), Exponent(Call('func', []), Number(2)));
     });
   });
 

@@ -581,7 +581,7 @@ class FieldAccess extends Expression {
 }
 
 class Negative extends Expression<num> {
-  final Expression<num> value;
+  final Expression value;
   Negative(this.value);
 
   @override
@@ -597,11 +597,19 @@ class Negative extends Expression<num> {
 }
 
 class Not extends Expression<bool> {
-  final Expression<bool> value;
+  final Expression value;
   Not(this.value);
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitNot(this);
+
+  @override
+  int get hashCode => value.hashCode + 3;
+
+  @override
+  bool operator ==(Object other) {
+    return other is Not && value == other.value;
+  }
 }
 
 class Length extends Expression<int> {
@@ -621,20 +629,42 @@ class Length extends Expression<int> {
 }
 
 class And extends Expression<bool> {
-  final List<Expression<bool>> items;
+  final List<Expression> items;
   And(this.items);
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitAnd(this);
+
+  @override
+  int get hashCode => Object.hashAll(items);
+
+  @override
+  bool operator ==(Object other) {
+    return other is And &&
+        items.length == other.items.length &&
+        items.whereIndexed((i, e) => e == other.items[i]).length ==
+            items.length;
+  }
 }
 
 class Or extends Expression<bool> {
-  final List<Expression<bool>> items;
+  final List<Expression> items;
 
   Or(this.items);
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitOr(this);
+
+  @override
+  int get hashCode => Object.hashAll(items);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Or &&
+        items.length == other.items.length &&
+        items.whereIndexed((i, e) => e == other.items[i]).length ==
+            items.length;
+  }
 }
 
 class Equals extends Expression<bool> {
@@ -645,6 +675,14 @@ class Equals extends Expression<bool> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitEquals(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Equals && left == other.left && right == other.right;
+  }
 }
 
 class NotEquals extends Expression<bool> {
@@ -655,6 +693,14 @@ class NotEquals extends Expression<bool> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitNotEquals(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is NotEquals && left == other.left && right == other.right;
+  }
 }
 
 class Less extends Expression<bool> {
@@ -665,6 +711,14 @@ class Less extends Expression<bool> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitLess(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Less && left == other.left && right == other.right;
+  }
 }
 
 class LessEq extends Expression<bool> {
@@ -675,6 +729,14 @@ class LessEq extends Expression<bool> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitLessEq(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is LessEq && left == other.left && right == other.right;
+  }
 }
 
 class Greater extends Expression<bool> {
@@ -685,6 +747,14 @@ class Greater extends Expression<bool> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitGreater(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Greater && left == other.left && right == other.right;
+  }
 }
 
 class GreaterEq extends Expression<bool> {
@@ -695,6 +765,14 @@ class GreaterEq extends Expression<bool> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitGreaterEq(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is GreaterEq && left == other.left && right == other.right;
+  }
 }
 
 class Concatenate extends Expression<String> {
@@ -704,6 +782,17 @@ class Concatenate extends Expression<String> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitConcatenate(this);
+
+  @override
+  int get hashCode => Object.hashAll(values);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Concatenate &&
+        values.length == other.values.length &&
+        values.whereIndexed((i, e) => e == other.values[i]).length ==
+            values.length;
+  }
 }
 
 class Add extends Expression<num> {
@@ -713,6 +802,17 @@ class Add extends Expression<num> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitAdd(this);
+
+  @override
+  int get hashCode => Object.hashAll(values);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Add &&
+        values.length == other.values.length &&
+        values.whereIndexed((i, e) => e == other.values[i]).length ==
+            values.length;
+  }
 }
 
 class Subtract extends Expression<num> {
@@ -723,6 +823,14 @@ class Subtract extends Expression<num> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitSubtract(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Subtract && left == other.left && right == other.right;
+  }
 }
 
 class Multiply extends Expression<num> {
@@ -732,6 +840,17 @@ class Multiply extends Expression<num> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitMultiply(this);
+
+  @override
+  int get hashCode => Object.hashAll(values);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Multiply &&
+        values.length == other.values.length &&
+        values.whereIndexed((i, e) => e == other.values[i]).length ==
+            values.length;
+  }
 }
 
 class Divide extends Expression<num> {
@@ -742,6 +861,14 @@ class Divide extends Expression<num> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitDivide(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Divide && left == other.left && right == other.right;
+  }
 }
 
 class Modulo extends Expression<num> {
@@ -752,6 +879,14 @@ class Modulo extends Expression<num> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitModulo(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Modulo && left == other.left && right == other.right;
+  }
 }
 
 class Exponent extends Expression<num> {
@@ -762,6 +897,14 @@ class Exponent extends Expression<num> {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitExponent(this);
+
+  @override
+  int get hashCode => Object.hash(left, right);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Exponent && left == other.left && right == other.right;
+  }
 }
 
 class VarRef<E> extends Expression<E> {
