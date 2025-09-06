@@ -11,17 +11,22 @@ void main() {
   final env1 = LuaEnv.withStdlib(variables: {'hub': staticHub});
 
   // Call methods through field access
-  final addFunc = FieldAccess(VarRef('hub'), 'add').evaluate(env: env1) as Function;
+  final addFunc =
+      FieldAccess(VarRef('hub'), 'add').evaluate(env: env1) as Function;
   final sum = addFunc([10, 5]);
-  Call('print', [LuaString('10 + 5 ='), Number(sum as num)]).evaluate(env: env1);
+  Call('print', [LuaString('10 + 5 ='), Number(sum as num)])
+      .evaluate(env: env1);
 
-  final greetFunc = FieldAccess(VarRef('hub'), 'greet').evaluate(env: env1) as Function;
+  final greetFunc =
+      FieldAccess(VarRef('hub'), 'greet').evaluate(env: env1) as Function;
   final greeting = greetFunc(['Lua']);
-  Call('print', [LuaString('Greeting:'), LuaString(greeting as String)]).evaluate(env: env1);
+  Call('print', [LuaString('Greeting:'), LuaString(greeting as String)])
+      .evaluate(env: env1);
 
   // Access properties
   final version = FieldAccess(VarRef('hub'), 'version').evaluate(env: env1);
-  Call('print', [LuaString('Version:'), LuaString(version as String)]).evaluate(env: env1);
+  Call('print', [LuaString('Version:'), LuaString(version as String)])
+      .evaluate(env: env1);
 
   print('Output:\n${env1.getOutput()}');
 
@@ -29,7 +34,8 @@ void main() {
   print('2. Dynamic Hub - Add Methods at Runtime:');
   final dynamicHub = FlexibleHub()
     ..addMethod('double', (args) => (args[0] as num) * 2)
-    ..addMethod('reverse', (args) => (args[0] as String).split('').reversed.join())
+    ..addMethod(
+        'reverse', (args) => (args[0] as String).split('').reversed.join())
     ..addMethod('factorial', (args) {
       final n = args[0] as int;
       return List.generate(n, (i) => i + 1).fold(1, (a, b) => a * b);
@@ -39,13 +45,17 @@ void main() {
 
   final env2 = LuaEnv.withStdlib(variables: {'flex': dynamicHub.toLuaObject()});
 
-  final doubleFunc = FieldAccess(VarRef('flex'), 'double').evaluate(env: env2) as Function;
+  final doubleFunc =
+      FieldAccess(VarRef('flex'), 'double').evaluate(env: env2) as Function;
   final doubled = doubleFunc([21]);
-  Call('print', [LuaString('Double 21:'), Number(doubled as num)]).evaluate(env: env2);
+  Call('print', [LuaString('Double 21:'), Number(doubled as num)])
+      .evaluate(env: env2);
 
-  final factorialFunc = FieldAccess(VarRef('flex'), 'factorial').evaluate(env: env2) as Function;
+  final factorialFunc =
+      FieldAccess(VarRef('flex'), 'factorial').evaluate(env: env2) as Function;
   final factorial = factorialFunc([5]);
-  Call('print', [LuaString('5! ='), Number(factorial as num)]).evaluate(env: env2);
+  Call('print', [LuaString('5! ='), Number(factorial as num)])
+      .evaluate(env: env2);
 
   print('Output:\n${env2.getOutput()}');
 
@@ -55,16 +65,20 @@ void main() {
   final env3 = LuaEnv.withStdlib(variables: {'api': apiHub});
 
   // Access nested methods: api.math.sqrt(16)
-  final mathCategory = FieldAccess(VarRef('api'), 'math').evaluate(env: env3) as LuaDartObject;
+  final mathCategory =
+      FieldAccess(VarRef('api'), 'math').evaluate(env: env3) as LuaDartObject;
   final sqrtFunc = mathCategory.getProperty('sqrt') as Function;
   final sqrt = sqrtFunc([16]);
-  Call('print', [LuaString('sqrt(16) ='), Number(sqrt as num)]).evaluate(env: env3);
+  Call('print', [LuaString('sqrt(16) ='), Number(sqrt as num)])
+      .evaluate(env: env3);
 
   // Access string methods: api.string.upper("hello")
-  final stringCategory = FieldAccess(VarRef('api'), 'string').evaluate(env: env3) as LuaDartObject;
+  final stringCategory =
+      FieldAccess(VarRef('api'), 'string').evaluate(env: env3) as LuaDartObject;
   final upperFunc = stringCategory.getProperty('upper') as Function;
   final upper = upperFunc(['hello']);
-  Call('print', [LuaString('upper("hello") ='), LuaString(upper as String)]).evaluate(env: env3);
+  Call('print', [LuaString('upper("hello") ='), LuaString(upper as String)])
+      .evaluate(env: env3);
 
   print('Output:\n${env3.getOutput()}');
 
@@ -93,22 +107,31 @@ void main() {
       return str == str.split('').reversed.join();
     },
     'wordCount': (args) => (args[0] as String).split(' ').length,
-    'capitalize': (args) => (args[0] as String).split(' ')
-        .map((word) => word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1))
+    'capitalize': (args) => (args[0] as String)
+        .split(' ')
+        .map((word) =>
+            word.isEmpty ? '' : word[0].toUpperCase() + word.substring(1))
         .join(' '),
   });
 
-  final env4 = LuaEnv.withStdlib(variables: {'plugins': pluginHub.toLuaObject()});
+  final env4 =
+      LuaEnv.withStdlib(variables: {'plugins': pluginHub.toLuaObject()});
 
-  final mathPlugin = FieldAccess(VarRef('plugins'), 'math').evaluate(env: env4) as LuaDartObject;
+  final mathPlugin = FieldAccess(VarRef('plugins'), 'math').evaluate(env: env4)
+      as LuaDartObject;
   final squareFunc = mathPlugin.getProperty('square') as Function;
   final squared = squareFunc([7]);
-  Call('print', [LuaString('Square of 7:'), Number(squared as num)]).evaluate(env: env4);
+  Call('print', [LuaString('Square of 7:'), Number(squared as num)])
+      .evaluate(env: env4);
 
-  final stringPlugin = FieldAccess(VarRef('plugins'), 'string').evaluate(env: env4) as LuaDartObject;
+  final stringPlugin = FieldAccess(VarRef('plugins'), 'string')
+      .evaluate(env: env4) as LuaDartObject;
   final palindromeFunc = stringPlugin.getProperty('palindrome') as Function;
   final isPalindrome = palindromeFunc(['racecar']);
-  Call('print', [LuaString('"racecar" is palindrome:'), Bool(isPalindrome as bool)]).evaluate(env: env4);
+  Call('print', [
+    LuaString('"racecar" is palindrome:'),
+    Bool(isPalindrome as bool)
+  ]).evaluate(env: env4);
 
   print('Output:\n${env4.getOutput()}');
 
@@ -118,23 +141,32 @@ void main() {
   final env5 = LuaEnv.withStdlib(variables: {'state': stateHub.toLuaObject()});
 
   // Store some data
-  final storeFunc = FieldAccess(VarRef('state'), 'store').evaluate(env: env5) as Function;
+  final storeFunc =
+      FieldAccess(VarRef('state'), 'store').evaluate(env: env5) as Function;
   storeFunc(['user', 'Alice']);
   storeFunc(['score', 95]);
 
   // Retrieve data
-  final retrieveFunc = FieldAccess(VarRef('state'), 'retrieve').evaluate(env: env5) as Function;
+  final retrieveFunc =
+      FieldAccess(VarRef('state'), 'retrieve').evaluate(env: env5) as Function;
   final user = retrieveFunc(['user']);
   final score = retrieveFunc(['score']);
-  Call('print', [LuaString('User:'), LuaString(user as String), LuaString('Score:'), Number(score as num)]).evaluate(env: env5);
+  Call('print', [
+    LuaString('User:'),
+    LuaString(user as String),
+    LuaString('Score:'),
+    Number(score as num)
+  ]).evaluate(env: env5);
 
   // Increment counter
-  final incrementFunc = FieldAccess(VarRef('state'), 'increment').evaluate(env: env5) as Function;
+  final incrementFunc =
+      FieldAccess(VarRef('state'), 'increment').evaluate(env: env5) as Function;
   incrementFunc([]);
   incrementFunc([]);
 
   final counter = FieldAccess(VarRef('state'), 'counter').evaluate(env: env5);
-  Call('print', [LuaString('Counter:'), Number(counter as num)]).evaluate(env: env5);
+  Call('print', [LuaString('Counter:'), Number(counter as num)])
+      .evaluate(env: env5);
 
   print('Output:\n${env5.getOutput()}');
 
@@ -145,7 +177,8 @@ void main() {
   print('3. Nested Hub - Organized into categories/modules');
   print('4. Plugin Hub - Extensible plugin system');
   print('5. Stateful Hub - Maintains data between calls');
-  print('\nAll approaches provide flexible ways to expose Dart functionality to Lua!');
+  print(
+      '\nAll approaches provide flexible ways to expose Dart functionality to Lua!');
 }
 
 /// 1. Static Hub - Predefined methods
@@ -161,7 +194,8 @@ LuaDartObject createStaticHub() {
       'max': (args) => args.cast<num>().reduce((a, b) => a > b ? a : b),
       'min': (args) => args.cast<num>().reduce((a, b) => a < b ? a : b),
       'join': (args) => args.join(' '),
-      'random': (args) => math.Random().nextInt((args.isNotEmpty ? args[0] : 100) as int),
+      'random': (args) =>
+          math.Random().nextInt((args.isNotEmpty ? args[0] : 100) as int),
     },
     getters: {
       'version': () => '1.0.0',
@@ -201,12 +235,13 @@ class FlexibleHub {
 
   LuaDartObject toLuaObject() {
     final allMethods = Map<String, Function>.from(_methods);
-    
+
     // Add introspection methods
     allMethods['listMethods'] = (args) => getMethodNames();
     allMethods['listProperties'] = (args) => getPropertyNames();
     allMethods['hasMethod'] = (args) => _methods.containsKey(args[0] as String);
-    allMethods['hasProperty'] = (args) => _properties.containsKey(args[0] as String);
+    allMethods['hasProperty'] =
+        (args) => _properties.containsKey(args[0] as String);
 
     return LuaDartObject(
       'FlexibleHub',
@@ -263,7 +298,8 @@ LuaDartObject createNestedHub() {
     'ArrayAPI',
     methods: {
       'length': (args) => (args[0] as List).length,
-      'join': (args) => (args[0] as List).join(args.length > 1 ? args[1] as String : ','),
+      'join': (args) =>
+          (args[0] as List).join(args.length > 1 ? args[1] as String : ','),
       'reverse': (args) => (args[0] as List).reversed.toList(),
       'sort': (args) {
         final list = List.from(args[0] as List);
@@ -288,10 +324,14 @@ LuaDartObject createNestedHub() {
       'listCategories': (args) => ['math', 'string', 'array'],
       'getCategory': (args) {
         switch (args[0] as String) {
-          case 'math': return mathHub;
-          case 'string': return stringHub;
-          case 'array': return arrayHub;
-          default: return null;
+          case 'math':
+            return mathHub;
+          case 'string':
+            return stringHub;
+          case 'array':
+            return arrayHub;
+          default:
+            return null;
         }
       },
     },
@@ -302,7 +342,8 @@ LuaDartObject createNestedHub() {
 class PluginHub {
   final Map<String, LuaDartObject> _plugins = {};
 
-  void registerPlugin(String name, Map<String, Function> methods, [Map<String, Object? Function()>? getters]) {
+  void registerPlugin(String name, Map<String, Function> methods,
+      [Map<String, Object? Function()>? getters]) {
     _plugins[name] = LuaDartObject(
       name,
       methods: methods,
@@ -384,7 +425,7 @@ class StateHub {
         'keys': (args) => _storage.keys.toList(),
         'values': (args) => _storage.values.toList(),
         'has': (args) => _storage.containsKey(args[0] as String),
-        
+
         // Counter methods
         'increment': (args) {
           _counter++;
@@ -406,7 +447,7 @@ class StateHub {
           _history.add('RESET_COUNTER');
           return _counter;
         },
-        
+
         // History methods
         'getHistory': (args) => _history,
         'clearHistory': (args) {

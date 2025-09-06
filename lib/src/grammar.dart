@@ -265,9 +265,61 @@ class LuaGrammarDefinition extends GrammarDefinition {
       .map((value) => Number(num.parse(value)));
 
   Parser<LuaString> string() =>
-      (char('"') & char('"').neg().star().flatten() & char('"'))
-          .trim()
-          .map((value) => LuaString(value[1] as String));
+      (ref0(doubleQuotedString) | ref0(singleQuotedString) | ref0(longString))
+          .cast<LuaString>();
+
+  // Double-quoted strings with escape sequences
+  Parser<LuaString> doubleQuotedString() =>
+      (char('"') & ref0(doubleQuotedContent).star() & char('"'))
+          .map((value) => LuaString((value[1] as List).join()));
+
+  Parser<String> doubleQuotedContent() =>
+      (ref0(escapeSequence) | char('"').neg()).cast<String>();
+
+  // Single-quoted strings with escape sequences
+  Parser<LuaString> singleQuotedString() =>
+      (char("'") & ref0(singleQuotedContent).star() & char("'"))
+          .map((value) => LuaString((value[1] as List).join()));
+
+  Parser<String> singleQuotedContent() =>
+      (ref0(escapeSequence) | char("'").neg()).cast<String>();
+
+  // Long strings [[...]]
+  Parser<LuaString> longString() => (char('[') &
+          char('[') &
+          (char(']') & char(']')).neg().star().flatten() &
+          char(']') &
+          char(']'))
+      .map((value) => LuaString(value[2] as String));
+
+  // Escape sequences
+  Parser<String> escapeSequence() => (char(r'\') &
+          ((digit() & digit() & digit()).map((value) {
+                final code = int.parse(value.join());
+                if (code > 255) {
+                  throw FormatException(
+                      'Decimal escape sequence out of range: $code');
+                }
+                return String.fromCharCode(code);
+              }) |
+              (char('x') & pattern('0-9a-fA-F') & pattern('0-9a-fA-F'))
+                  .map((value) {
+                final hex = value.sublist(1).join();
+                return String.fromCharCode(int.parse(hex, radix: 16));
+              }) |
+              char('n').map((_) => '\n') |
+              char('t').map((_) => '\t') |
+              char('r').map((_) => '\r') |
+              char('b').map((_) => '\b') |
+              char('f').map((_) => '\f') |
+              char('a').map((_) => '\x07') | // bell
+              char('v').map((_) => '\v') | // vertical tab
+              char(r'\').map((_) => r'\') |
+              char('"').map((_) => '"') |
+              char("'").map((_) => "'") |
+              char('0').map((_) => '\x00') | // null
+              any()))
+      .map((value) => value[1] as String);
 
   Parser<VarRef> varRef() => token(ref0(name)).map((value) => VarRef(value));
 

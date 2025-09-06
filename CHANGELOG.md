@@ -2,6 +2,7 @@
 
 **New features**:
  - arithmetic expressions with precendence checks
+ - string escapes and multiple formats
  - table literal and expressions
  - control statements
  - multiple assignments
