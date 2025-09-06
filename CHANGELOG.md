@@ -4,6 +4,7 @@
  - arithmetic expressions with precendence checks
  - table literal and expressions
  - control statements
+ - multiple assignments
 
 **Breaking changes**:
  - fixed spelling in classes and methods: `s/Substract/Subtract/`

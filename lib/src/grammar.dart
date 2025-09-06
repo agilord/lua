@@ -246,9 +246,15 @@ class LuaGrammarDefinition extends GrammarDefinition {
             .map((value) => value[1]),
       ].toChoiceParser().map((value) => value);
 
-  Parser<Assign> assignment() =>
-      (ref0(name).trim() & char('=').trim() & ref0(expression)).map(
-          (value) => Assign.single(value[0] as String, value[2] as Expression));
+  Parser<Assign> assignment() => (token('local'.toParser()).optional() &
+          ref0(name).plusSeparated(char(',').trim()) &
+          char('=').trim() &
+          ref0(expression).plusSeparated(char(',').trim()))
+      .map((value) => Assign(
+            (value[1] as SeparatedList).elements.cast<String>(),
+            (value[3] as SeparatedList).elements.cast<Expression>(),
+            isLocal: value[0] != null,
+          ));
 
   Parser<Statement> callStatement() {
     return ref0(postfixExpression).where((expr) => expr is Call).cast<Call>();

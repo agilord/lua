@@ -299,6 +299,39 @@ void main() {
       expect(parseStmt('x = 1'), Assign.single('x', Number(1)));
     });
 
+    test('multiple assignment', () {
+      expect(
+          parseStmt('x, y = 1, 2'), Assign(['x', 'y'], [Number(1), Number(2)]));
+      expect(parseStmt('a, b, c = true, false, nil'),
+          Assign(['a', 'b', 'c'], [Bool(true), Bool(false), Nil()]));
+    });
+
+    test('multiple assignment with fewer values', () {
+      expect(parseStmt('x, y = 1'), Assign(['x', 'y'], [Number(1)]));
+    });
+
+    test('multiple assignment with expressions', () {
+      expect(
+          parseStmt('x, y = a + b, c * d'),
+          Assign([
+            'x',
+            'y'
+          ], [
+            Add([VarRef('a'), VarRef('b')]),
+            Multiply([VarRef('c'), VarRef('d')])
+          ]));
+    });
+
+    test('local assignment single', () {
+      expect(parseStmt('local x = 1'),
+          Assign.single('x', Number(1), isLocal: true));
+    });
+
+    test('local assignment multiple', () {
+      expect(parseStmt('local x, y = 1, 2'),
+          Assign(['x', 'y'], [Number(1), Number(2)], isLocal: true));
+    });
+
     test('function calls', () {
       expect(parseStmt('print()'), Call('print', []));
     });
