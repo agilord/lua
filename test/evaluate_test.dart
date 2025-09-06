@@ -385,6 +385,126 @@ void main() {
     });
   });
 
+  group('table indexing evaluation', () {
+    test('basic table indexing with numbers', () {
+      final env = LuaEnv(variables: {
+        'table': TableInstance.fromMap({1: 'first', 2: 'second', 3: 'third'})
+      });
+
+      expect(Index(VarRef('table'), Number(1)).evaluate(env: env), 'first');
+      expect(Index(VarRef('table'), Number(2)).evaluate(env: env), 'second');
+      expect(Index(VarRef('table'), Number(3)).evaluate(env: env), 'third');
+    });
+
+    test('basic table indexing with string keys', () {
+      final env = LuaEnv(variables: {
+        'table':
+            TableInstance.fromMap({'name': 'John', 'age': 30, 'city': 'NYC'})
+      });
+
+      expect(
+          Index(VarRef('table'), LuaString('name')).evaluate(env: env), 'John');
+      expect(Index(VarRef('table'), LuaString('age')).evaluate(env: env), 30);
+      expect(
+          Index(VarRef('table'), LuaString('city')).evaluate(env: env), 'NYC');
+    });
+
+    test('field access with dot notation', () {
+      final env = LuaEnv(variables: {
+        'table': TableInstance.fromMap({
+          'name': 'Alice',
+          'score': 95,
+        })
+      });
+
+      expect(FieldAccess(VarRef('table'), 'name').evaluate(env: env), 'Alice');
+      expect(FieldAccess(VarRef('table'), 'score').evaluate(env: env), 95);
+    });
+
+    test('nested table indexing', () {
+      final env = LuaEnv(variables: {
+        'table': TableInstance.fromMap({
+          'point': TableInstance.fromMap({'x': 10, 'y': 20}),
+          1: 42,
+        })
+      });
+
+      expect(
+          FieldAccess(FieldAccess(VarRef('table'), 'point'), 'x')
+              .evaluate(env: env),
+          10);
+      expect(
+          FieldAccess(FieldAccess(VarRef('table'), 'point'), 'y')
+              .evaluate(env: env),
+          20);
+      expect(Index(VarRef('table'), Number(1)).evaluate(env: env), 42);
+    });
+
+    test('indexing with variable keys', () {
+      final env = LuaEnv(variables: {
+        'table': TableInstance.fromMap({'key1': 'value1', 'key2': 'value2'}),
+        'k1': 'key1',
+        'k2': 'key2',
+      });
+
+      expect(Index(VarRef('table'), VarRef('k1')).evaluate(env: env), 'value1');
+      expect(Index(VarRef('table'), VarRef('k2')).evaluate(env: env), 'value2');
+    });
+
+    test('indexing non-existent keys returns nil', () {
+      final env = LuaEnv(variables: {
+        'table': TableInstance.fromMap({'existing': 1})
+      });
+
+      expect(Index(VarRef('table'), LuaString('missing')).evaluate(env: env),
+          null);
+      expect(FieldAccess(VarRef('table'), 'missing').evaluate(env: env), null);
+    });
+
+    test('mixed indexing and field access', () {
+      final env = LuaEnv(variables: {
+        'table': TableInstance.fromMap({
+          'data': TableInstance.fromMap({1: 'item1', 2: 'item2'}),
+          'config': TableInstance.fromMap({'enabled': true}),
+        })
+      });
+
+      expect(
+          Index(FieldAccess(VarRef('table'), 'data'), Number(1))
+              .evaluate(env: env),
+          'item1');
+      expect(
+          FieldAccess(FieldAccess(VarRef('table'), 'config'), 'enabled')
+              .evaluate(env: env),
+          true);
+    });
+
+    test('error on indexing non-table values', () {
+      expect(() => Index(Number(42), Number(1)).evaluate(),
+          throwsA(isA<EvaluationException>()));
+      expect(() => FieldAccess(LuaString('not_a_table'), 'field').evaluate(),
+          throwsA(isA<EvaluationException>()));
+    });
+
+    test('complex table access patterns', () {
+      final env = LuaEnv(variables: {
+        'users': TableInstance.fromMap({
+          1: TableInstance.fromMap({'name': 'Alice', 'id': 101}),
+          2: TableInstance.fromMap({'name': 'Bob', 'id': 102}),
+        })
+      });
+
+      expect(
+          FieldAccess(Index(VarRef('users'), Number(1)), 'name')
+              .evaluate(env: env),
+          'Alice');
+      expect(
+          FieldAccess(Index(VarRef('users'), Number(2)), 'id')
+              .evaluate(env: env),
+          102);
+    });
+  });
+
   group('control flow evaluation', () {
     test('if statement - true condition', () {
       final env = LuaEnv(variables: {'x': true, 'result': 0});

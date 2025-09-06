@@ -89,6 +89,33 @@ void main() {
       expect(
           parseExpr('{a = y}'), Table([Field(name: 'a', value: VarRef('y'))]));
     });
+
+    test('table indexing with brackets', () {
+      expect(parseExpr('t[1]'), Index(VarRef('t'), Number(1)));
+      expect(parseExpr('t[key]'), Index(VarRef('t'), VarRef('key')));
+      expect(parseExpr('t["name"]'), Index(VarRef('t'), LuaString('name')));
+    });
+
+    test('table field access with dot', () {
+      expect(parseExpr('t.name'), FieldAccess(VarRef('t'), 'name'));
+      expect(parseExpr('t.field'), FieldAccess(VarRef('t'), 'field'));
+    });
+
+    test('nested table indexing', () {
+      expect(parseExpr('t[1][2]'),
+          Index(Index(VarRef('t'), Number(1)), Number(2)));
+      expect(
+          parseExpr('t.a.b'), FieldAccess(FieldAccess(VarRef('t'), 'a'), 'b'));
+      expect(parseExpr('t[key].field'),
+          FieldAccess(Index(VarRef('t'), VarRef('key')), 'field'));
+      expect(parseExpr('t.field[1]'),
+          Index(FieldAccess(VarRef('t'), 'field'), Number(1)));
+    });
+
+    test('complex table indexing expressions', () {
+      expect(parseExpr('({})[1]'), Index(Table([]), Number(1)));
+      // Note: arithmetic expressions in index not yet supported due to operator precedence
+    });
   });
 
   group('statements', () {

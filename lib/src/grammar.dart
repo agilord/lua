@@ -26,12 +26,49 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(returnStatement),
         ref0(breakStatement),
         ref0(assignment),
-        ref0(call),
+        ref0(callStatement),
       ].toChoiceParser().map((value) => value);
 
-  Parser<Expression> expression() => ref0(primary);
+  Parser<Expression> expression() => ref0(postfixExpression);
 
-  Parser<Expression> primary() => <Parser<Expression>>[
+  Parser<Expression> postfixExpression() {
+    return ref0(atomicExpression)
+        .seq(
+      <Parser>[
+        // Function call: expr(args) - only support simple variable names for now
+        (char('(').trim() &
+                ref0(expression).starSeparated(char(',').trim()) &
+                char(')').trim())
+            .map((value) => (Expression base) {
+                  if (base is VarRef) {
+                    return Call(
+                        base.name,
+                        (value[1] as SeparatedList)
+                            .elements
+                            .cast<Expression>());
+                  } else {
+                    throw FormatException(
+                        'Only simple function names are supported for calls: $base');
+                  }
+                }),
+        // Index access: expr[key]
+        (char('[').trim() & ref0(expression) & char(']').trim()).map((value) =>
+            (Expression base) => Index(base, value[1] as Expression)),
+        // Field access: expr.field
+        (char('.').trim() & ref0(name)).map((value) =>
+            (Expression base) => FieldAccess(base, value[1] as String)),
+      ].toChoiceParser().star(),
+    )
+        .map((value) {
+      Expression result = value[0] as Expression;
+      for (final fn in value[1] as List) {
+        result = (fn as Function)(result);
+      }
+      return result;
+    });
+  }
+
+  Parser<Expression> atomicExpression() => <Parser<Expression>>[
         ref0(nil),
         ref0(boolTrue),
         ref0(boolFalse),
@@ -39,7 +76,6 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(string),
         ref0(table),
         ref0(varRef),
-        ref0(call),
         (char('(').trim() & ref0(expression) & char(')').trim())
             .map((value) => value[1]),
       ].toChoiceParser().map((value) => value);
@@ -48,12 +84,9 @@ class LuaGrammarDefinition extends GrammarDefinition {
       (ref0(name).trim() & char('=').trim() & ref0(expression)).map(
           (value) => Assign.single(value[0] as String, value[2] as Expression));
 
-  Parser<Call> call() => (ref0(name) &
-          char('(') &
-          ref0(expression).starSeparated(char(',')) &
-          char(')'))
-      .map((value) => Call(value[0] as String,
-          (value[2] as SeparatedList).elements.cast<Expression>()));
+  Parser<Statement> callStatement() {
+    return ref0(postfixExpression).where((expr) => expr is Call).cast<Call>();
+  }
 
   Parser<Number> number() => token(
           (digit().plus() & (char('.') & digit().plus()).optional()).flatten())

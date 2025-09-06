@@ -96,6 +96,25 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitIndex(Index value) {
+    final table = value.table.visit(this);
+    if (table is TableInstance) {
+      final key = value.key.visit(this);
+      return table.fields[key];
+    }
+    throw EvaluationException('Cannot index non-table value: $table');
+  }
+
+  @override
+  Object? visitFieldAccess(FieldAccess value) {
+    final table = value.table.visit(this);
+    if (table is TableInstance) {
+      return table.fields[value.field];
+    }
+    throw EvaluationException('Cannot access field on non-table value: $table');
+  }
+
+  @override
   bool visitAnd(And value) {
     for (final i in value.items) {
       final v = i.visit(this);

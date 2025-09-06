@@ -2,7 +2,7 @@
 
 **New features**:
  - arithmetic expressions
- - table expressions
+ - table literal and expressions
  - control statements
 
 **Breaking changes**:

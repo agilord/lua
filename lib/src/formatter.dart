@@ -238,6 +238,23 @@ class _LuaFormatter extends Visitor<_Code> {
   }
 
   @override
+  _Code visitIndex(Index value) {
+    return value.table
+        .visit(this)
+        .joinInline(_Code.line('['))
+        .joinInline(value.key.visit(this))
+        .joinInline(_Code.line(']'));
+  }
+
+  @override
+  _Code visitFieldAccess(FieldAccess value) {
+    return value.table
+        .visit(this)
+        .joinInline(_Code.line('.'))
+        .joinInline(_Code.line(value.field));
+  }
+
+  @override
   _Code visitNegative(Negative value) =>
       value.value.visit(this).prefixFirst('-');
 

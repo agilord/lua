@@ -323,6 +323,43 @@ void main() {
           ])),
           '{first, second=value, [key]=val}');
     });
+
+    test('table indexing with brackets', () {
+      expect(format(Index(VarRef('t'), Number(1))), 't[1]');
+      expect(format(Index(VarRef('table'), VarRef('key'))), 'table[key]');
+      expect(format(Index(VarRef('t'), LuaString('name'))), 't["name"]');
+    });
+
+    test('table field access with dot', () {
+      expect(format(FieldAccess(VarRef('t'), 'name')), 't.name');
+      expect(format(FieldAccess(VarRef('obj'), 'field')), 'obj.field');
+    });
+
+    test('nested table indexing', () {
+      expect(
+        format(Index(Index(VarRef('t'), Number(1)), Number(2))),
+        't[1][2]',
+      );
+      expect(
+        format(FieldAccess(FieldAccess(VarRef('t'), 'a'), 'b')),
+        't.a.b',
+      );
+      expect(
+        format(FieldAccess(Index(VarRef('t'), VarRef('key')), 'field')),
+        't[key].field',
+      );
+      expect(
+        format(Index(FieldAccess(VarRef('t'), 'field'), Number(1))),
+        't.field[1]',
+      );
+    });
+
+    test('complex table expressions', () {
+      expect(format(Index(Table([]), Number(1))), '{}[1]');
+      expect(
+          format(FieldAccess(Table([Field(name: 'x', value: Number(1))]), 'x')),
+          '{x=1}.x');
+    });
   });
 
   group('control flow formatting', () {

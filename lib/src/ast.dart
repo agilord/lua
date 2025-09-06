@@ -30,6 +30,8 @@ abstract class Visitor<T> {
   T visitNumber(Number value) => visitExpression(value);
   T visitString(LuaString value) => visitExpression(value);
   T visitTable(Table value) => visitExpression(value);
+  T visitIndex(Index value) => visitExpression(value);
+  T visitFieldAccess(FieldAccess value) => visitExpression(value);
   T visitNegative(Negative value) => visitExpression(value);
   T visitLength(Length value) => visitExpression(value);
 
@@ -539,6 +541,42 @@ class Field {
         name == other.name &&
         index == other.index &&
         value == other.value;
+  }
+}
+
+class Index extends Expression {
+  final Expression table;
+  final Expression key;
+
+  Index(this.table, this.key);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitIndex(this);
+
+  @override
+  int get hashCode => Object.hashAll([table, key]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Index && table == other.table && key == other.key;
+  }
+}
+
+class FieldAccess extends Expression {
+  final Expression table;
+  final String field;
+
+  FieldAccess(this.table, this.field);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitFieldAccess(this);
+
+  @override
+  int get hashCode => Object.hashAll([table, field]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is FieldAccess && table == other.table && field == other.field;
   }
 }
 
