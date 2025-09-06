@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:collection/collection.dart';
@@ -12,25 +13,120 @@ extension EvaluateExt on Ast {
   }
 }
 
+typedef LuaFunction = Object? Function(List<Object?> args);
+
+/// Interface for handling output from Lua programs
+abstract class LuaOutputWriter {
+  void write(String text);
+  void writeLine(String text);
+}
+
+/// Default output writer that captures output in a buffer
+class LuaOutputBuffer implements LuaOutputWriter {
+  final StringBuffer _buffer = StringBuffer();
+  final bool _alsoConsole;
+
+  LuaOutputBuffer({bool alsoConsole = false}) : _alsoConsole = alsoConsole;
+
+  @override
+  void write(String text) {
+    _buffer.write(text);
+    if (_alsoConsole) {
+      stdout.write(text);
+    }
+  }
+
+  @override
+  void writeLine(String text) {
+    _buffer.writeln(text);
+    if (_alsoConsole) {
+      print(text);
+    }
+  }
+
+  /// Get all captured output
+  String get output => _buffer.toString();
+
+  /// Get output lines as a list
+  List<String> get lines =>
+      output.split('\n')..removeLast(); // Remove empty last line
+
+  /// Clear the output buffer
+  void clear() => _buffer.clear();
+
+  /// Check if buffer has any output
+  bool get isEmpty => _buffer.isEmpty;
+  bool get isNotEmpty => _buffer.isNotEmpty;
+}
+
 class LuaEnv {
   final Map<String, Object?>? variables;
+  final Map<String, LuaFunction>? builtins;
+  final LuaOutputWriter output;
 
   LuaEnv({
     this.variables,
-  });
+    this.builtins,
+    LuaOutputWriter? output,
+  }) : output = output ?? LuaOutputBuffer();
+
+  /// Create a LuaEnv with standard library functions
+  factory LuaEnv.withStdlib({
+    Map<String, Object?>? variables,
+    LuaOutputWriter? output,
+  }) {
+    final env = LuaEnv(
+      variables: variables,
+      output: output ?? LuaOutputBuffer(),
+    );
+    return LuaEnv(
+      variables: variables,
+      builtins: _getStandardLibrary(env.output),
+      output: env.output,
+    );
+  }
+
+  /// Get output as string (convenience method for LuaOutputBuffer)
+  String getOutput() {
+    if (output is LuaOutputBuffer) {
+      return (output as LuaOutputBuffer).output;
+    }
+    return '';
+  }
+
+  /// Get output lines (convenience method for LuaOutputBuffer)
+  List<String> getOutputLines() {
+    if (output is LuaOutputBuffer) {
+      return (output as LuaOutputBuffer).lines;
+    }
+    return [];
+  }
+
+  /// Clear output (convenience method for LuaOutputBuffer)
+  void clearOutput() {
+    if (output is LuaOutputBuffer) {
+      (output as LuaOutputBuffer).clear();
+    }
+  }
 }
 
 class _Context extends Visitor<Object?> {
   final _Context? parent;
   final vars = <String, Object?>{};
+  final Map<String, LuaFunction> builtins;
+  final LuaOutputWriter output;
 
-  _Context.fromEnv(LuaEnv env) : parent = null {
+  _Context.fromEnv(LuaEnv env)
+      : parent = null,
+        builtins = env.builtins ?? {},
+        output = env.output {
     vars.addAll(env.variables ?? const {});
   }
 
   _Context({
     required this.parent,
-  });
+  })  : builtins = parent?.builtins ?? {},
+        output = parent?.output ?? LuaOutputBuffer();
 
   _Context _fork() {
     return _Context(parent: this);
@@ -41,6 +137,8 @@ class _Context extends Visitor<Object?> {
       return vars[name];
     } else if (parent != null) {
       return parent!.lookup(name);
+    } else if (builtins.containsKey(name)) {
+      return builtins[name];
     } else {
       throw EvaluationException('reference to unknown key: $name');
     }
@@ -101,6 +199,13 @@ class _Context extends Visitor<Object?> {
     if (table is TableInstance) {
       final key = value.key.visit(this);
       return table.fields[key];
+    } else if (table is LuaExternalObject) {
+      final key = value.key.visit(this);
+      if (key is String) {
+        return table.getProperty(key);
+      }
+      throw EvaluationException(
+          'External object index must be a string, got: $key');
     }
     throw EvaluationException('Cannot index non-table value: $table');
   }
@@ -110,6 +215,8 @@ class _Context extends Visitor<Object?> {
     final table = value.table.visit(this);
     if (table is TableInstance) {
       return table.fields[value.field];
+    } else if (table is LuaExternalObject) {
+      return table.getProperty(value.field);
     }
     throw EvaluationException('Cannot access field on non-table value: $table');
   }
@@ -258,6 +365,12 @@ class _Context extends Visitor<Object?> {
         return result.first;
       }
       return result;
+    } else if (function is LuaFunction) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      return function(args);
+    } else if (function is LuaExternalObject) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      return function.call(args);
     }
     throw EvaluationException('Function "${value.name}" is not implemented');
   }
@@ -507,4 +620,144 @@ class _LuaFunction {
       return e.value;
     }
   }
+}
+
+/// Base class for external objects that can be called from Lua
+abstract class LuaExternalObject {
+  Object? call(List<Object?> args);
+  Object? getProperty(String name);
+  void setProperty(String name, Object? value);
+}
+
+/// Implementation of a Dart object wrapper for Lua
+class LuaDartObject extends LuaExternalObject {
+  final Object dartObject;
+  final Map<String, Function> methods;
+  final Map<String, Object? Function()> getters;
+  final Map<String, void Function(Object?)> setters;
+
+  LuaDartObject(
+    this.dartObject, {
+    this.methods = const {},
+    this.getters = const {},
+    this.setters = const {},
+  });
+
+  @override
+  Object? call(List<Object?> args) {
+    if (dartObject is Function) {
+      // For functions that expect a List<Object?> as single parameter
+      final func = dartObject as Function;
+      if (func is Object? Function(List<Object?>)) {
+        return func(args);
+      }
+      // For functions that expect individual parameters
+      return Function.apply(func, args);
+    }
+    throw EvaluationException('Object $dartObject is not callable');
+  }
+
+  @override
+  Object? getProperty(String name) {
+    if (methods.containsKey(name)) {
+      return methods[name];
+    }
+    if (getters.containsKey(name)) {
+      return getters[name]!();
+    }
+    throw EvaluationException('Property $name not found on $dartObject');
+  }
+
+  @override
+  void setProperty(String name, Object? value) {
+    if (setters.containsKey(name)) {
+      setters[name]!(value);
+    } else {
+      throw EvaluationException(
+          'Property $name is not settable on $dartObject');
+    }
+  }
+}
+
+/// Standard library functions for Lua
+Map<String, LuaFunction> _getStandardLibrary(LuaOutputWriter output) {
+  return {
+    'print': (args) {
+      final text = args.map(_luaToString).join('\t');
+      output.writeLine(text);
+      return null;
+    },
+    'type': (args) {
+      if (args.isEmpty) return 'nil';
+      final value = args.first;
+      if (value == null) return 'nil';
+      if (value is bool) return 'boolean';
+      if (value is num) return 'number';
+      if (value is String) return 'string';
+      if (value is TableInstance) return 'table';
+      if (value is _LuaFunction || value is LuaFunction) return 'function';
+      return 'userdata';
+    },
+    'tostring': (args) {
+      if (args.isEmpty) return 'nil';
+      return _luaToString(args.first);
+    },
+    'tonumber': (args) {
+      if (args.isEmpty) return null;
+      final value = args.first;
+      if (value is num) return value;
+      if (value is String) {
+        final parsed = num.tryParse(value);
+        return parsed;
+      }
+      return null;
+    },
+    'ipairs': (args) {
+      if (args.isEmpty) return null;
+      final table = args.first;
+      if (table is! TableInstance) {
+        throw EvaluationException(
+            'bad argument #1 to \'ipairs\' (table expected)');
+      }
+      // Return an iterator function (simplified for now)
+      return (List<Object?> iterArgs) {
+        // This would normally return the next key-value pair
+        // For now, just return the table for basic compatibility
+        return table;
+      };
+    },
+    'pairs': (args) {
+      if (args.isEmpty) return null;
+      final table = args.first;
+      if (table is! TableInstance) {
+        throw EvaluationException(
+            'bad argument #1 to \'pairs\' (table expected)');
+      }
+      // Return an iterator function (simplified for now)
+      return (List<Object?> iterArgs) {
+        // This would normally return the next key-value pair
+        // For now, just return the table for basic compatibility
+        return table;
+      };
+    },
+  };
+}
+
+String _luaToString(Object? value) {
+  if (value == null) return 'nil';
+  if (value is bool) return value.toString();
+  if (value is num) {
+    if (value is int) return value.toString();
+    if (value == value.toInt()) return value.toInt().toString();
+    return value.toString();
+  }
+  if (value is String) return value;
+  if (value is TableInstance) {
+    return 'table: ${value.hashCode.toRadixString(16)}';
+  }
+  if (value is _LuaFunction || value is LuaFunction) {
+    return 'function: ${value.hashCode.toRadixString(16)}';
+  }
+  if (value is LuaDartObject) return value.dartObject.toString();
+  return value.toString();
 }
