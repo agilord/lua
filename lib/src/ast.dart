@@ -252,6 +252,16 @@ class While extends Statement {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitWhile(this);
+
+  @override
+  int get hashCode => Object.hashAll([condition, block]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is While &&
+        condition == other.condition &&
+        block == other.block;
+  }
 }
 
 class Repeat extends Statement {
@@ -278,6 +288,21 @@ class If extends Statement {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitIf(this);
+
+  @override
+  int get hashCode => Object.hashAll([condition, block, elseIfs, elseBlock]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is If &&
+        condition == other.condition &&
+        block == other.block &&
+        elseIfs?.length == other.elseIfs?.length &&
+        (elseIfs == null ||
+            elseIfs!.whereIndexed((i, e) => e == other.elseIfs![i]).length ==
+                elseIfs!.length) &&
+        elseBlock == other.elseBlock;
+  }
 }
 
 class ElseIf {
@@ -285,6 +310,16 @@ class ElseIf {
   final Block block;
 
   ElseIf(this.condition, this.block);
+
+  @override
+  int get hashCode => Object.hashAll([condition, block]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is ElseIf &&
+        condition == other.condition &&
+        block == other.block;
+  }
 }
 
 class For extends Statement {
@@ -304,6 +339,19 @@ class For extends Statement {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitFor(this);
+
+  @override
+  int get hashCode => Object.hashAll([name, init, stop, increment, block]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is For &&
+        name == other.name &&
+        init == other.init &&
+        stop == other.stop &&
+        increment == other.increment &&
+        block == other.block;
+  }
 }
 
 class ForEach extends Statement {
@@ -332,6 +380,19 @@ class FunctionDef extends Statement {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitFunctionDef(this);
+
+  @override
+  int get hashCode => Object.hashAll([name, ...args, body, isLocal]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is FunctionDef &&
+        name == other.name &&
+        args.length == other.args.length &&
+        args.whereIndexed((i, e) => e == other.args[i]).length == args.length &&
+        body == other.body &&
+        isLocal == other.isLocal;
+  }
 }
 
 class Return extends Statement {
@@ -340,6 +401,18 @@ class Return extends Statement {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitReturn(this);
+
+  @override
+  int get hashCode => Object.hashAll(values ?? []);
+
+  @override
+  bool operator ==(Object other) {
+    return other is Return &&
+        values?.length == other.values?.length &&
+        (values == null ||
+            values!.whereIndexed((i, e) => e == other.values![i]).length ==
+                values!.length);
+  }
 }
 
 class Break extends Statement {
@@ -347,6 +420,14 @@ class Break extends Statement {
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitBreak(this);
+
+  @override
+  int get hashCode => 'Break'.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is Break;
+  }
 }
 
 class InlineFunction extends Expression {

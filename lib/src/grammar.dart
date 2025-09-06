@@ -19,6 +19,12 @@ class LuaGrammarDefinition extends GrammarDefinition {
       ref0(statement).plusSeparated(anyOf(';\n')).map((v) => Block(v.elements));
 
   Parser<Statement> statement() => <Parser<Statement>>[
+        ref0(functionDef),
+        ref0(ifStatement),
+        ref0(whileStatement),
+        ref0(forStatement),
+        ref0(returnStatement),
+        ref0(breakStatement),
         ref0(assignment),
         ref0(call),
       ].toChoiceParser().map((value) => value);
@@ -88,6 +94,85 @@ class LuaGrammarDefinition extends GrammarDefinition {
       ].toChoiceParser();
 
   Parser<String> identifier() => pattern('a-zA-Z_').plus().flatten().trim();
+
+  Parser<If> ifStatement() => (token('if'.toParser()) &
+          ref0(expression) &
+          token('then'.toParser()) &
+          ref0(block) &
+          ref0(elseIfParts).optional() &
+          ref0(elsePart).optional() &
+          token('end'.toParser()))
+      .map((value) => If(
+            value[1] as Expression,
+            value[3] as Block,
+            elseIfs: value[4] as List<ElseIf>?,
+            elseBlock: value[5] as Block?,
+          ));
+
+  Parser<List<ElseIf>> elseIfParts() => ref0(elseIfPart).plus();
+
+  Parser<ElseIf> elseIfPart() => (token('elseif'.toParser()) &
+          ref0(expression) &
+          token('then'.toParser()) &
+          ref0(block))
+      .map((value) => ElseIf(value[1] as Expression, value[3] as Block));
+
+  Parser<Block> elsePart() => (token('else'.toParser()) & ref0(block))
+      .map((value) => value[1] as Block);
+
+  Parser<While> whileStatement() => (token('while'.toParser()) &
+          ref0(expression) &
+          token('do'.toParser()) &
+          ref0(block) &
+          token('end'.toParser()))
+      .map((value) => While(value[1] as Expression, value[3] as Block));
+
+  Parser<For> forStatement() => (token('for'.toParser()) &
+          ref0(name) &
+          char('=').trim() &
+          ref0(expression) &
+          char(',').trim() &
+          ref0(expression) &
+          (char(',').trim() & ref0(expression)).optional() &
+          token('do'.toParser()) &
+          ref0(block) &
+          token('end'.toParser()))
+      .map((value) => For(
+            name: value[1] as String,
+            init: value[3] as Expression,
+            stop: value[5] as Expression,
+            increment: (value[6] as List?)?[1] as Expression?,
+            block: value[8] as Block,
+          ));
+
+  Parser<FunctionDef> functionDef() => (token('local'.toParser()).optional() &
+          token('function'.toParser()) &
+          ref0(name) &
+          char('(') &
+          ref0(paramList) &
+          char(')') &
+          ref0(block) &
+          token('end'.toParser()))
+      .map((value) => FunctionDef(
+            value[2] as String,
+            value[4] as List<String>,
+            value[6] as Block,
+            isLocal: value[0] != null,
+          ));
+
+  Parser<List<String>> paramList() => ref0(name)
+      .plusSeparated(char(',').trim())
+      .optional()
+      .map((value) => value?.elements.cast<String>() ?? <String>[]);
+
+  Parser<Return> returnStatement() => (token('return'.toParser()) &
+          ref0(expression).plusSeparated(char(',').trim()).optional())
+      .map((value) => Return(
+            values: (value[1] as SeparatedList?)?.elements.cast<Expression>(),
+          ));
+
+  Parser<Break> breakStatement() =>
+      token('break'.toParser()).map((value) => Break());
 
   Parser<Nil> nil() => token('nil'.toParser()).map((value) => Nil());
   Parser<Bool> boolTrue() =>

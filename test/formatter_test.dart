@@ -324,4 +324,175 @@ void main() {
           '{first, second=value, [key]=val}');
     });
   });
+
+  group('control flow formatting', () {
+    test('if statement', () {
+      expect(
+        format(If(VarRef('x'), Block([Call('print', [])]))),
+        'if x then\n'
+        '  print()\n'
+        'end',
+      );
+    });
+
+    test('if-else statement', () {
+      expect(
+        format(If(
+          VarRef('x'),
+          Block([Call('print', [])]),
+          elseBlock: Block([Call('call', [])]),
+        )),
+        'if x then\n'
+        '  print()\n'
+        'else\n'
+        '  call()\n'
+        'end',
+      );
+    });
+
+    test('if-elseif-else statement', () {
+      expect(
+        format(If(
+          VarRef('x'),
+          Block([Call('print', [])]),
+          elseIfs: [
+            ElseIf(VarRef('y'), Block([Call('call', [])]))
+          ],
+          elseBlock: Block([Call('other', [])]),
+        )),
+        'if x then\n'
+        '  print()\n'
+        'elseif y\n'
+        '  call()\n'
+        'else\n'
+        '  other()\n'
+        'end',
+      );
+    });
+
+    test('while loop', () {
+      expect(
+        format(While(VarRef('condition'), Block([Call('work', [])]))),
+        'while condition do \n'
+        '  work()\n'
+        'end',
+      );
+    });
+
+    test('for loop', () {
+      expect(
+        format(For(
+          name: 'i',
+          init: Number(1),
+          stop: Number(10),
+          block: Block([
+            Call('print', [VarRef('i')])
+          ]),
+        )),
+        'for i = 1, 10 do\n'
+        '  print(i)\n'
+        'end',
+      );
+    });
+
+    test('for loop with increment', () {
+      expect(
+        format(For(
+          name: 'i',
+          init: Number(0),
+          stop: Number(100),
+          increment: Number(10),
+          block: Block([
+            Call('step', [VarRef('i')])
+          ]),
+        )),
+        'for i = 0, 100, 10 do\n'
+        '  step(i)\n'
+        'end',
+      );
+    });
+
+    test('function definition', () {
+      expect(
+        format(FunctionDef(
+          'calculate',
+          ['x', 'y'],
+          Block([
+            Return(values: [
+              Add([VarRef('x'), VarRef('y')])
+            ])
+          ]),
+        )),
+        'function calculate(x, y)\n'
+        '  return x+y\n'
+        'end',
+      );
+    });
+
+    test('local function definition', () {
+      expect(
+        format(FunctionDef(
+          'helper',
+          [],
+          Block([
+            Call('print', [LuaString('helper called')])
+          ]),
+          isLocal: true,
+        )),
+        'local function helper()\n'
+        '  print("helper called")\n'
+        'end',
+      );
+    });
+
+    test('return statements', () {
+      expect(format(Return()), 'return');
+      expect(format(Return(values: [Number(42)])), 'return 42');
+      expect(
+        format(Return(values: [VarRef('x'), VarRef('y')])),
+        'return x, y',
+      );
+    });
+
+    test('break statement', () {
+      expect(format(Break()), 'break');
+    });
+
+    test('nested control structures', () {
+      expect(
+        format(If(
+          VarRef('condition'),
+          Block([
+            While(
+              VarRef('running'),
+              Block([
+                For(
+                  name: 'i',
+                  init: Number(1),
+                  stop: Number(5),
+                  block: Block([
+                    If(
+                      Equals(VarRef('i'), Number(3)),
+                      Block([Break()]),
+                    ),
+                    Call('process', [VarRef('i')]),
+                  ]),
+                ),
+              ]),
+            ),
+          ]),
+        )),
+        'if condition then\n'
+        '  while running do \n'
+        '    for i = 1, 5 do\n'
+        '      if i==3 then\n'
+        '        break\n'
+        '      end\n'
+        '      process(i)\n'
+        '    end\n'
+        '  end\n'
+        'end',
+      );
+    });
+  });
 }

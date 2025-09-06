@@ -3,6 +3,7 @@
 **New features**:
  - arithmetic expressions
  - table expressions
+ - control statements
 
 **Breaking changes**:
  - fixed spelling in classes and methods: `s/Substract/Subtract/`

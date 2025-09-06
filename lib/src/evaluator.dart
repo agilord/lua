@@ -230,7 +230,16 @@ class _Context extends Visitor<Object?> {
 
   @override
   Object? visitCall(Call value) {
-    // For now, just throw an exception for unknown function calls
+    final function = lookup(value.name);
+    if (function is _LuaFunction) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      final result = function.call(args);
+      // When used in expression context, unwrap single-element lists
+      if (result is List && result.length == 1) {
+        return result.first;
+      }
+      return result;
+    }
     throw EvaluationException('Function "${value.name}" is not implemented');
   }
 
@@ -273,6 +282,94 @@ class _Context extends Visitor<Object?> {
       return v.fields.length;
     }
     throw UnimplementedError();
+  }
+
+  @override
+  Object? visitIf(If value) {
+    final condition = value.condition.visit(this);
+    if (!_isFalse(condition)) {
+      final result = value.block.visit(_fork());
+      if (result is List && result.length == 1) {
+        return result.first;
+      }
+      return result;
+    }
+
+    if (value.elseIfs != null) {
+      for (final elseIf in value.elseIfs!) {
+        final elseIfCondition = elseIf.condition.visit(this);
+        if (!_isFalse(elseIfCondition)) {
+          final result = elseIf.block.visit(_fork());
+          if (result is List && result.length == 1) {
+            return result.first;
+          }
+          return result;
+        }
+      }
+    }
+
+    if (value.elseBlock != null) {
+      final result = value.elseBlock!.visit(_fork());
+      if (result is List && result.length == 1) {
+        return result.first;
+      }
+      return result;
+    }
+
+    return null;
+  }
+
+  @override
+  Object? visitFor(For value) {
+    final initValue = value.init.visit(this) as num;
+    final stopValue = value.stop.visit(this) as num;
+    final incrementValue = value.increment?.visit(this) as num? ?? 1;
+
+    Object? lastValue;
+    final forked = _fork();
+
+    if (incrementValue > 0) {
+      for (num i = initValue; i <= stopValue; i += incrementValue) {
+        forked.vars[value.name] = i;
+        try {
+          lastValue = value.block.visit(forked);
+        } on _BreakException {
+          break;
+        }
+      }
+    } else {
+      for (num i = initValue; i >= stopValue; i += incrementValue) {
+        forked.vars[value.name] = i;
+        try {
+          lastValue = value.block.visit(forked);
+        } on _BreakException {
+          break;
+        }
+      }
+    }
+
+    return lastValue;
+  }
+
+  @override
+  Object? visitForEach(ForEach value) {
+    // For now, just throw an exception - foreach needs iterator support
+    throw EvaluationException('ForEach is not implemented yet');
+  }
+
+  @override
+  Object? visitFunctionDef(FunctionDef value) {
+    final function = _LuaFunction(value.args, value.body, this);
+    if (value.isLocal) {
+      vars[value.name] = function;
+    } else {
+      _Context? c = this;
+      while (c?.parent != null) {
+        c = c!.parent;
+      }
+      c!.vars[value.name] = function;
+    }
+    return function;
   }
 
   void _set(bool isLocal, String name, Object? value) {
@@ -369,3 +466,26 @@ class _ReturnException implements Exception {
 }
 
 class _BreakException implements Exception {}
+
+class _LuaFunction {
+  final List<String> parameters;
+  final Block body;
+  final _Context closure;
+
+  _LuaFunction(this.parameters, this.body, this.closure);
+
+  Object? call(List<Object?> args) {
+    final functionContext = _Context(parent: closure);
+
+    // Bind parameters
+    for (int i = 0; i < parameters.length; i++) {
+      functionContext.vars[parameters[i]] = i < args.length ? args[i] : null;
+    }
+
+    try {
+      return body.visit(functionContext);
+    } on _ReturnException catch (e) {
+      return e.value;
+    }
+  }
+}

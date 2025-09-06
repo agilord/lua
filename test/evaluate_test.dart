@@ -384,4 +384,292 @@ void main() {
       expect(table5, isNot(table6));
     });
   });
+
+  group('control flow evaluation', () {
+    test('if statement - true condition', () {
+      final env = LuaEnv(variables: {'x': true, 'result': 0});
+      final result = If(
+        VarRef('x'),
+        Block([Assign.single('result', Number(42))]),
+      ).evaluate(env: env);
+      expect(result, 42);
+    });
+
+    test('if statement - false condition', () {
+      final env = LuaEnv(variables: {'x': false, 'result': 0});
+      final result = If(
+        VarRef('x'),
+        Block([Assign.single('result', Number(42))]),
+      ).evaluate(env: env);
+      expect(result, null);
+    });
+
+    test('if-else statement', () {
+      final env = LuaEnv(variables: {'condition': false});
+      final result = If(
+        VarRef('condition'),
+        Block([
+          Return(values: [Number(1)])
+        ]),
+        elseBlock: Block([
+          Return(values: [Number(2)])
+        ]),
+      ).evaluate(env: env);
+      expect(result, 2);
+    });
+
+    test('if-elseif-else statement', () {
+      final env = LuaEnv(variables: {'x': false, 'y': true});
+      final result = If(
+        VarRef('x'),
+        Block([
+          Return(values: [Number(1)])
+        ]),
+        elseIfs: [
+          ElseIf(
+              VarRef('y'),
+              Block([
+                Return(values: [Number(2)])
+              ]))
+        ],
+        elseBlock: Block([
+          Return(values: [Number(3)])
+        ]),
+      ).evaluate(env: env);
+      expect(result, 2);
+    });
+
+    test('for loop basic', () {
+      final block = Block([
+        Assign.single('sum', Number(0), isLocal: true),
+        For(
+          name: 'i',
+          init: Number(1),
+          stop: Number(5),
+          block: Block([
+            Assign.single('sum', Add([VarRef('sum'), VarRef('i')])),
+          ]),
+        ),
+        VarRef('sum'),
+      ]);
+      expect(block.evaluate(), 15); // 1+2+3+4+5
+    });
+
+    test('for loop with increment', () {
+      final block = Block([
+        Assign.single('sum', Number(0), isLocal: true),
+        For(
+          name: 'i',
+          init: Number(0),
+          stop: Number(10),
+          increment: Number(2),
+          block: Block([
+            Assign.single('sum', Add([VarRef('sum'), VarRef('i')])),
+          ]),
+        ),
+        VarRef('sum'),
+      ]);
+      expect(block.evaluate(), 30); // 0+2+4+6+8+10
+    });
+
+    test('for loop with negative increment', () {
+      final block = Block([
+        Assign.single('sum', Number(0), isLocal: true),
+        For(
+          name: 'i',
+          init: Number(5),
+          stop: Number(1),
+          increment: Number(-1),
+          block: Block([
+            Assign.single('sum', Add([VarRef('sum'), VarRef('i')])),
+          ]),
+        ),
+        VarRef('sum'),
+      ]);
+      expect(block.evaluate(), 15); // 5+4+3+2+1
+    });
+
+    test('for loop with break', () {
+      final block = Block([
+        Assign.single('sum', Number(0), isLocal: true),
+        For(
+          name: 'i',
+          init: Number(1),
+          stop: Number(10),
+          block: Block([
+            If(
+              Greater(VarRef('i'), Number(3)),
+              Block([Break()]),
+            ),
+            Assign.single('sum', Add([VarRef('sum'), VarRef('i')])),
+          ]),
+        ),
+        VarRef('sum'),
+      ]);
+      expect(block.evaluate(), 6); // 1+2+3, stops at 4
+    });
+
+    test('function definition and call', () {
+      final block = Block([
+        FunctionDef(
+          'add',
+          ['a', 'b'],
+          Block([
+            Return(values: [
+              Add([VarRef('a'), VarRef('b')])
+            ])
+          ]),
+        ),
+        Call('add', [Number(5), Number(3)]),
+      ]);
+      expect(block.evaluate(), 8);
+    });
+
+    test('local function definition', () {
+      final block = Block([
+        FunctionDef(
+          'multiply',
+          ['x', 'y'],
+          Block([
+            Return(values: [
+              Multiply([VarRef('x'), VarRef('y')])
+            ])
+          ]),
+          isLocal: true,
+        ),
+        Call('multiply', [Number(4), Number(6)]),
+      ]);
+      expect(block.evaluate(), 24);
+    });
+
+    test('function with no parameters', () {
+      final block = Block([
+        FunctionDef(
+          'getConstant',
+          [],
+          Block([
+            Return(values: [Number(42)])
+          ]),
+        ),
+        Call('getConstant', []),
+      ]);
+      expect(block.evaluate(), 42);
+    });
+
+    test('function with more arguments than parameters', () {
+      final block = Block([
+        FunctionDef(
+          'first',
+          ['a'],
+          Block([
+            Return(values: [VarRef('a')])
+          ]),
+        ),
+        Call('first', [Number(1), Number(2), Number(3)]),
+      ]);
+      expect(block.evaluate(), 1); // Extra arguments ignored
+    });
+
+    test('function with fewer arguments than parameters', () {
+      final block = Block([
+        FunctionDef(
+          'defaultParam',
+          ['a', 'b'],
+          Block([
+            If(
+              Equals(VarRef('b'), Nil()),
+              Block([
+                Return(values: [VarRef('a')])
+              ]),
+              elseBlock: Block([
+                Return(values: [
+                  Add([VarRef('a'), VarRef('b')])
+                ])
+              ]),
+            ),
+          ]),
+        ),
+        Call('defaultParam', [Number(5)]), // b will be nil
+      ]);
+      expect(block.evaluate(), 5);
+    });
+
+    test('recursive function', () {
+      final block = Block([
+        FunctionDef(
+          'factorial',
+          ['n'],
+          Block([
+            If(
+              Less(VarRef('n'), Number(2)),
+              Block([
+                Return(values: [Number(1)])
+              ]),
+              elseBlock: Block([
+                Return(values: [
+                  Multiply([
+                    VarRef('n'),
+                    Call('factorial', [Subtract(VarRef('n'), Number(1))])
+                  ])
+                ])
+              ]),
+            ),
+          ]),
+        ),
+        Call('factorial', [Number(5)]),
+      ]);
+      expect(block.evaluate(), 120); // 5! = 120
+    });
+
+    test('function closure captures variables', () {
+      final block = Block([
+        Assign.single('counter', Number(0), isLocal: true),
+        FunctionDef(
+          'increment',
+          [],
+          Block([
+            Assign.single('counter', Add([VarRef('counter'), Number(1)])),
+            Return(values: [VarRef('counter')]),
+          ]),
+          isLocal: true,
+        ),
+        Call('increment', []),
+        Call('increment', []),
+        Assign.single('result', Call('increment', []), isLocal: true),
+        VarRef('result'),
+      ]);
+      expect(block.evaluate(), 3);
+    });
+
+    test('nested control structures', () {
+      final block = Block([
+        Assign.single('total', Number(0), isLocal: true),
+        For(
+          name: 'i',
+          init: Number(1),
+          stop: Number(3),
+          block: Block([
+            For(
+              name: 'j',
+              init: Number(1),
+              stop: Number(2),
+              block: Block([
+                If(
+                  Equals(VarRef('i'), Number(2)),
+                  Block([
+                    Assign.single('total', Add([VarRef('total'), Number(10)])),
+                  ]),
+                  elseBlock: Block([
+                    Assign.single('total', Add([VarRef('total'), Number(1)])),
+                  ]),
+                ),
+              ]),
+            ),
+          ]),
+        ),
+        VarRef('total'),
+      ]);
+      expect(block.evaluate(), 24); // (1+1) + (10+10) + (1+1) = 24
+    });
+  });
 }

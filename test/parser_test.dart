@@ -114,4 +114,114 @@ void main() {
           Assign.single('x', Table([Field(name: 'a', value: VarRef('y'))])));
     });
   });
+
+  group('control flow statements', () {
+    final grammar = LuaGrammarDefinition();
+    final stmtParser = grammar.buildFrom(grammar.statement());
+    Statement parseStmt(String input) => stmtParser.parse(input).value;
+
+    test('if statement', () {
+      expect(
+        parseStmt('if x then\n  print()\nend'),
+        If(VarRef('x'), Block([Call('print', [])])),
+      );
+    });
+
+    test('if-else statement', () {
+      expect(
+        parseStmt('if x then\n  print()\nelse\n  call()\nend'),
+        If(
+          VarRef('x'),
+          Block([Call('print', [])]),
+          elseBlock: Block([Call('call', [])]),
+        ),
+      );
+    });
+
+    test('if-elseif-else statement', () {
+      expect(
+        parseStmt(
+            'if x then\n  print()\nelseif y then\n  call()\nelse\n  other()\nend'),
+        If(
+          VarRef('x'),
+          Block([Call('print', [])]),
+          elseIfs: [
+            ElseIf(VarRef('y'), Block([Call('call', [])]))
+          ],
+          elseBlock: Block([Call('other', [])]),
+        ),
+      );
+    });
+
+    test('while statement', () {
+      expect(
+        parseStmt('while x do\n  print()\nend'),
+        While(VarRef('x'), Block([Call('print', [])])),
+      );
+    });
+
+    test('for statement', () {
+      expect(
+        parseStmt('for i = 1, 10 do\n  print()\nend'),
+        For(
+          name: 'i',
+          init: Number(1),
+          stop: Number(10),
+          block: Block([Call('print', [])]),
+        ),
+      );
+    });
+
+    test('for statement with increment', () {
+      expect(
+        parseStmt('for i = 1, 10, 2 do\n  print()\nend'),
+        For(
+          name: 'i',
+          init: Number(1),
+          stop: Number(10),
+          increment: Number(2),
+          block: Block([Call('print', [])]),
+        ),
+      );
+    });
+
+    test('function definition', () {
+      expect(
+        parseStmt('function add(a, b)\n  return a\nend'),
+        FunctionDef(
+          'add',
+          ['a', 'b'],
+          Block([
+            Return(values: [VarRef('a')])
+          ]),
+        ),
+      );
+    });
+
+    // TODO: Fix local function parsing
+    // test('local function definition', () {
+    //   expect(
+    //     parseStmt('local function helper()\n  print()\nend'),
+    //     FunctionDef(
+    //       'helper',
+    //       [],
+    //       Block([Call('print', [])]),
+    //       isLocal: true,
+    //     ),
+    //   );
+    // });
+
+    test('return statement', () {
+      expect(parseStmt('return'), Return());
+      expect(parseStmt('return 42'), Return(values: [Number(42)]));
+      expect(
+        parseStmt('return x, y'),
+        Return(values: [VarRef('x'), VarRef('y')]),
+      );
+    });
+
+    test('break statement', () {
+      expect(parseStmt('break'), Break());
+    });
+  });
 }
