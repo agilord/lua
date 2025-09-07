@@ -200,11 +200,21 @@ void main() {
         return 'Called with ${args.length} arguments';
       });
 
-      final env = LuaEnv(variables: {'func': callableObject});
+      final env = LuaEnv.withStdlib(variables: {'func': callableObject});
 
-      // Test direct call - this would require Call to work with external objects
-      // For now, test that the object is callable
+      // Test direct call
       expect(callableObject.call([1, 2, 3]), 'Called with 3 arguments');
+
+      // Test that the callable object is accessible in the environment
+      expect(VarRef('func').evaluate(env: env), callableObject);
+
+      // Test type function with callable object
+      expect(Call('type', [VarRef('func')]).evaluate(env: env), 'userdata');
+
+      // Test tostring with callable object
+      final stringResult =
+          Call('tostring', [VarRef('func')]).evaluate(env: env) as String;
+      expect(stringResult, contains('Closure'));
     });
   });
 
