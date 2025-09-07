@@ -444,6 +444,8 @@ class _Context extends Visitor<Object?> {
         lastValue = value.block.visit(_fork());
       } on _BreakException {
         return lastValue;
+      } on _ReturnException {
+        rethrow;
       }
     }
   }
@@ -456,9 +458,11 @@ class _Context extends Visitor<Object?> {
         lastValue = value.block.visit(_fork());
       } on _BreakException {
         return lastValue;
+      } on _ReturnException {
+        rethrow;
       }
       final expr = value.condition.visit(this);
-      if (_isFalse(expr)) {
+      if (!_isFalse(expr)) {
         return lastValue;
       }
     }
@@ -526,6 +530,8 @@ class _Context extends Visitor<Object?> {
           lastValue = value.block.visit(forked);
         } on _BreakException {
           break;
+        } on _ReturnException {
+          rethrow;
         }
       }
     } else {
@@ -535,6 +541,8 @@ class _Context extends Visitor<Object?> {
           lastValue = value.block.visit(forked);
         } on _BreakException {
           break;
+        } on _ReturnException {
+          rethrow;
         }
       }
     }

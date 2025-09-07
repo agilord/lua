@@ -31,6 +31,7 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(functionDef),
         ref0(ifStatement),
         ref0(whileStatement),
+        ref0(repeatStatement),
         ref0(forStatement),
         ref0(returnStatement),
         ref0(breakStatement),
@@ -403,6 +404,12 @@ class LuaGrammarDefinition extends GrammarDefinition {
           ref0(block) &
           token('end'.toParser()))
       .map((value) => While(value[1] as Expression, value[3] as Block));
+
+  Parser<Repeat> repeatStatement() => (token('repeat'.toParser()) &
+          ref0(block) &
+          token('until'.toParser()) &
+          ref0(expression))
+      .map((value) => Repeat(value[1] as Block, value[3] as Expression));
 
   Parser<Statement> forStatement() => <Parser<Statement>>[
         ref0(forNumericStatement),

@@ -92,7 +92,7 @@ void main() {
       expect(
           Repeat(
             Block([Assign.single('a', VarRef<int>('a').plus(1.lua()))]),
-            VarRef<int>('a').lessThan(5.lua()),
+            VarRef<int>('a').greaterThanOrEquals(5.lua()),
           ).evaluate(env: LuaEnv(variables: {'a': 1})),
           5);
     });
