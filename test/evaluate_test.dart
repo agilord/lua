@@ -175,10 +175,10 @@ void main() {
     test('assignment scoping', () {
       final env = LuaEnv(variables: {'global': 'initial'});
 
-      // Try to assign to non-existent variable (should throw)
+      // Assign to non-existent variable (should create global)
       expect(
-        () => Assign.single('nonexistent', Number(42)).evaluate(env: env),
-        throwsA(isA<ArgumentError>()),
+        Assign.single('nonexistent', Number(42)).evaluate(env: env),
+        42,
       );
 
       // Local assignment should work

@@ -247,7 +247,7 @@ class LuaGrammarDefinition extends GrammarDefinition {
       ].toChoiceParser().map((value) => value);
 
   Parser<Assign> assignment() => (token('local'.toParser()).optional() &
-          ref0(name).plusSeparated(char(',').trim()) &
+          allowedChars().plusString().trim().plusSeparated(char(',').trim()) &
           char('=').trim() &
           ref0(expression).plusSeparated(char(',').trim()))
       .map((value) => Assign(

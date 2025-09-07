@@ -162,8 +162,13 @@ class _Context extends Visitor<Object?> {
     if (value.values == null || value.values!.isEmpty) {
       throw _ReturnException(null);
     }
-    throw _ReturnException(
-        (value.values ?? const []).map((e) => e.visit(this)).toList());
+    final evaluatedValues =
+        (value.values ?? const []).map((e) => e.visit(this)).toList();
+    if (evaluatedValues.length == 1) {
+      throw _ReturnException(evaluatedValues.single);
+    } else {
+      throw _ReturnException(evaluatedValues);
+    }
   }
 
   @override
@@ -578,6 +583,7 @@ class _Context extends Visitor<Object?> {
       }
       vars[name] = value;
     } else {
+      // For non-local assignment, try to find existing variable in scope chain
       _Context? c = this;
       while (c != null) {
         if (c.vars.containsKey(name)) {
@@ -586,7 +592,12 @@ class _Context extends Visitor<Object?> {
         }
         c = c.parent;
       }
-      throw ArgumentError('Unknown reference "$name".');
+      // If variable doesn't exist anywhere, create it as global (in root scope)
+      _Context root = this;
+      while (root.parent != null) {
+        root = root.parent!;
+      }
+      root.vars[name] = value;
     }
   }
 }
