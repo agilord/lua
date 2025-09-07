@@ -75,14 +75,18 @@ class LuaEnv {
     Map<String, Object?>? variables,
     LuaOutputWriter? output,
   }) {
-    final env = LuaEnv(
-      variables: variables,
-      output: output ?? LuaOutputBuffer(),
-    );
+    final envOutput = output ?? LuaOutputBuffer();
+    final stdlibVars = <String, Object?>{};
+    stdlibVars.addAll(variables ?? {});
+
+    // Add math and string libraries as variables
+    stdlibVars['math'] = _createMathLibrary();
+    stdlibVars['string'] = _createStringLibrary();
+
     return LuaEnv(
-      variables: variables,
-      builtins: _getStandardLibrary(env.output),
-      output: env.output,
+      variables: stdlibVars,
+      builtins: _getStandardLibrary(envOutput),
+      output: envOutput,
     );
   }
 
@@ -407,6 +411,28 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitCallFieldAccess(CallFieldAccess value) {
+    // Evaluate the field access to get the function
+    final function = value.fieldAccess.visit(this);
+    if (function is LuaFunction) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      return function(args);
+    } else if (function is _LuaFunction) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      final result = function.call(args);
+      // When used in expression context, unwrap single-element lists
+      if (result is List && result.length == 1) {
+        return result.first;
+      }
+      return result;
+    } else if (function is LuaExternalObject) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      return function.call(args);
+    }
+    throw EvaluationException('Cannot call field access result: $function');
+  }
+
+  @override
   Object? visitWhile(While value) {
     Object? lastValue;
     for (;;) {
@@ -635,6 +661,7 @@ bool _isFalse(Object? v) => v == null || v == false;
 
 class TableInstance {
   final fields = <Object, Object?>{};
+  TableInstance? metatable;
 
   TableInstance();
 
@@ -833,8 +860,370 @@ class _LuaIpairsIterator {
   }
 }
 
+// Helper function for next() implementation
+List<Object?> _nextTableEntry(TableInstance table, Object? currentKey) {
+  final entries = table.fields.entries.toList();
+
+  if (currentKey == null) {
+    // Return first entry if available
+    if (entries.isNotEmpty) {
+      final first = entries.first;
+      return [first.key, first.value];
+    }
+    return [null];
+  }
+
+  // Find current key and return next entry
+  for (int i = 0; i < entries.length; i++) {
+    if (entries[i].key == currentKey) {
+      if (i + 1 < entries.length) {
+        final next = entries[i + 1];
+        return [next.key, next.value];
+      }
+      break;
+    }
+  }
+
+  return [null]; // End of iteration or key not found
+}
+
+// Create math library table
+TableInstance _createMathLibrary() {
+  final mathTable = TableInstance();
+  mathTable.fields.addAll({
+    // Constants
+    'pi': pi,
+    'huge': double.infinity,
+
+    // Basic arithmetic functions
+    'abs': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return value.abs();
+      throw EvaluationException('math.abs requires a number');
+    },
+    'ceil': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return value.ceil();
+      throw EvaluationException('math.ceil requires a number');
+    },
+    'floor': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return value.floor();
+      throw EvaluationException('math.floor requires a number');
+    },
+    'max': (List<Object?> args) {
+      if (args.isEmpty) return double.negativeInfinity;
+      num maxVal = double.negativeInfinity;
+      for (final arg in args) {
+        if (arg is num) {
+          if (arg > maxVal) maxVal = arg;
+        } else {
+          throw EvaluationException('math.max requires numbers');
+        }
+      }
+      return maxVal;
+    },
+    'min': (List<Object?> args) {
+      if (args.isEmpty) return double.infinity;
+      num minVal = double.infinity;
+      for (final arg in args) {
+        if (arg is num) {
+          if (arg < minVal) minVal = arg;
+        } else {
+          throw EvaluationException('math.min requires numbers');
+        }
+      }
+      return minVal;
+    },
+
+    // Power and logarithm functions
+    'pow': (List<Object?> args) {
+      if (args.length < 2) return 1;
+      final base = args[0];
+      final exponent = args[1];
+      if (base is num && exponent is num) {
+        return pow(base, exponent);
+      }
+      throw EvaluationException('math.pow requires two numbers');
+    },
+    'sqrt': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return sqrt(value);
+      throw EvaluationException('math.sqrt requires a number');
+    },
+    'log': (List<Object?> args) {
+      if (args.isEmpty) return double.nan;
+      final value = args.first;
+      if (value is num) {
+        if (args.length > 1) {
+          final base = args[1];
+          if (base is num) {
+            return log(value) / log(base);
+          }
+        }
+        return log(value);
+      }
+      throw EvaluationException('math.log requires a number');
+    },
+    'exp': (List<Object?> args) {
+      if (args.isEmpty) return 1;
+      final value = args.first;
+      if (value is num) return exp(value);
+      throw EvaluationException('math.exp requires a number');
+    },
+
+    // Trigonometric functions
+    'sin': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return sin(value);
+      throw EvaluationException('math.sin requires a number');
+    },
+    'cos': (List<Object?> args) {
+      if (args.isEmpty) return 1;
+      final value = args.first;
+      if (value is num) return cos(value);
+      throw EvaluationException('math.cos requires a number');
+    },
+    'tan': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return tan(value);
+      throw EvaluationException('math.tan requires a number');
+    },
+    'asin': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return asin(value);
+      throw EvaluationException('math.asin requires a number');
+    },
+    'acos': (List<Object?> args) {
+      if (args.isEmpty) return pi / 2;
+      final value = args.first;
+      if (value is num) return acos(value);
+      throw EvaluationException('math.acos requires a number');
+    },
+    'atan': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is num) return atan(value);
+      throw EvaluationException('math.atan requires a number');
+    },
+    'atan2': (List<Object?> args) {
+      if (args.length < 2) return 0;
+      final y = args[0];
+      final x = args[1];
+      if (y is num && x is num) return atan2(y, x);
+      throw EvaluationException('math.atan2 requires two numbers');
+    },
+
+    // Rounding functions
+    'fmod': (List<Object?> args) {
+      if (args.length < 2) return 0;
+      final x = args[0];
+      final y = args[1];
+      if (x is num && y is num) return x % y;
+      throw EvaluationException('math.fmod requires two numbers');
+    },
+    'modf': (List<Object?> args) {
+      if (args.isEmpty) return [0, 0];
+      final value = args.first;
+      if (value is num) {
+        final intPart = value.truncate();
+        final fracPart = value - intPart;
+        return [intPart, fracPart];
+      }
+      throw EvaluationException('math.modf requires a number');
+    },
+
+    // Random functions
+    'random': (List<Object?> args) {
+      final random = Random();
+      if (args.isEmpty) {
+        return random.nextDouble();
+      } else if (args.length == 1) {
+        final max = args[0];
+        if (max is int && max > 0) {
+          return random.nextInt(max) + 1; // Lua random(n) returns 1 to n
+        }
+      } else if (args.length >= 2) {
+        final min = args[0];
+        final max = args[1];
+        if (min is int && max is int && min <= max) {
+          return random.nextInt(max - min + 1) + min;
+        }
+      }
+      throw EvaluationException('math.random requires valid integer arguments');
+    },
+    'randomseed': (List<Object?> args) {
+      // Note: Dart's Random doesn't support setting seed after creation
+      // This is a simplified implementation
+      return null;
+    },
+  });
+  return mathTable;
+}
+
+// Create string library table
+TableInstance _createStringLibrary() {
+  final stringTable = TableInstance();
+  stringTable.fields.addAll({
+    'len': (List<Object?> args) {
+      if (args.isEmpty) return 0;
+      final value = args.first;
+      if (value is String) return value.length;
+      throw EvaluationException('string.len requires a string');
+    },
+    'upper': (List<Object?> args) {
+      if (args.isEmpty) return '';
+      final value = args.first;
+      if (value is String) return value.toUpperCase();
+      throw EvaluationException('string.upper requires a string');
+    },
+    'lower': (List<Object?> args) {
+      if (args.isEmpty) return '';
+      final value = args.first;
+      if (value is String) return value.toLowerCase();
+      throw EvaluationException('string.lower requires a string');
+    },
+    'sub': (List<Object?> args) {
+      if (args.isEmpty) return '';
+      final str = args[0];
+      if (str is! String) {
+        throw EvaluationException('string.sub requires a string');
+      }
+
+      int start = 1;
+      int end = str.length;
+
+      if (args.length > 1 && args[1] is int) {
+        start = args[1] as int;
+      }
+      if (args.length > 2 && args[2] is int) {
+        end = args[2] as int;
+      }
+
+      // Convert to 0-based indexing (Lua uses 1-based)
+      start = (start > 0) ? start - 1 : str.length + start;
+      end = (end > 0) ? end : str.length + end + 1;
+
+      start = start.clamp(0, str.length);
+      end = end.clamp(0, str.length);
+
+      if (start > end) return '';
+      return str.substring(start, end);
+    },
+    'find': (List<Object?> args) {
+      if (args.length < 2) return null;
+      final str = args[0];
+      final pattern = args[1];
+      if (str is! String || pattern is! String) {
+        throw EvaluationException('string.find requires two strings');
+      }
+
+      int startPos = 0;
+      if (args.length > 2 && args[2] is int) {
+        startPos = (args[2] as int) - 1; // Convert to 0-based
+        startPos = startPos.clamp(0, str.length);
+      }
+
+      final index = str.indexOf(pattern, startPos);
+      if (index == -1) return null;
+      return [index + 1, index + pattern.length]; // Convert back to 1-based
+    },
+    'rep': (List<Object?> args) {
+      if (args.length < 2) return '';
+      final str = args[0];
+      final count = args[1];
+      if (str is! String || count is! int) {
+        throw EvaluationException('string.rep requires a string and number');
+      }
+      if (count < 0) return '';
+      return str * count;
+    },
+    'reverse': (List<Object?> args) {
+      if (args.isEmpty) return '';
+      final value = args.first;
+      if (value is String) {
+        return value.split('').reversed.join();
+      }
+      throw EvaluationException('string.reverse requires a string');
+    },
+    'char': (List<Object?> args) {
+      final result = StringBuffer();
+      for (final arg in args) {
+        if (arg is int && arg >= 0 && arg <= 255) {
+          result.writeCharCode(arg);
+        } else {
+          throw EvaluationException(
+              'string.char requires valid character codes');
+        }
+      }
+      return result.toString();
+    },
+    'byte': (List<Object?> args) {
+      if (args.isEmpty) return null;
+      final str = args[0];
+      if (str is! String) {
+        throw EvaluationException('string.byte requires a string');
+      }
+
+      int pos = 1;
+      if (args.length > 1 && args[1] is int) {
+        pos = args[1] as int;
+      }
+
+      // Convert to 0-based indexing
+      pos = pos - 1;
+      if (pos < 0 || pos >= str.length) return null;
+
+      return str.codeUnitAt(pos);
+    },
+    'format': (List<Object?> args) {
+      // Simplified format implementation - just basic %s, %d, %f support
+      if (args.isEmpty) return '';
+      final format = args[0];
+      if (format is! String) {
+        throw EvaluationException('string.format requires a format string');
+      }
+
+      String result = format;
+      int argIndex = 1;
+
+      result = result.replaceAllMapped(RegExp('%[sdqfg]'), (match) {
+        if (argIndex < args.length) {
+          final arg = args[argIndex++];
+          switch (match.group(0)) {
+            case '%s':
+              return _luaToString(arg);
+            case '%d':
+              if (arg is num) return arg.toInt().toString();
+              return '0';
+            case '%f':
+            case '%g':
+              if (arg is num) return arg.toString();
+              return '0';
+            case '%q':
+              if (arg is String) return '"${arg.replaceAll('"', r'\"')}"';
+              return _luaToString(arg);
+          }
+        }
+        return match.group(0) ?? '';
+      });
+
+      return result.replaceAll('%%', '%');
+    },
+  });
+  return stringTable;
+}
+
 Map<String, LuaFunction> _getStandardLibrary(LuaOutputWriter output) {
   return {
+    // Basic functions
     'print': (args) {
       final text = args.map(_luaToString).join('\t');
       output.writeLine(text);
@@ -865,6 +1254,8 @@ Map<String, LuaFunction> _getStandardLibrary(LuaOutputWriter output) {
       }
       return null;
     },
+
+    // Table iteration functions
     'pairs': (args) {
       if (args.isEmpty) return null;
       final value = args.first;
@@ -880,6 +1271,62 @@ Map<String, LuaFunction> _getStandardLibrary(LuaOutputWriter output) {
         throw EvaluationException('ipairs() requires a table');
       }
       return _LuaIpairsIterator(value);
+    },
+    'next': (args) {
+      if (args.isEmpty) return null;
+      final table = args.first;
+      if (table is! TableInstance) {
+        throw EvaluationException('next() requires a table');
+      }
+      final key = args.length > 1 ? args[1] : null;
+      return _nextTableEntry(table, key);
+    },
+
+    // Raw table access functions
+    'rawget': (args) {
+      if (args.length < 2) return null;
+      final table = args[0];
+      final key = args[1];
+      if (table is! TableInstance) {
+        throw EvaluationException('rawget() requires a table');
+      }
+      return table.fields[key];
+    },
+    'rawset': (args) {
+      if (args.length < 3) return args.isNotEmpty ? args[0] : null;
+      final table = args[0];
+      final key = args[1];
+      final value = args[2];
+      if (table is! TableInstance) {
+        throw EvaluationException('rawset() requires a table');
+      }
+      if (key != null) {
+        table.fields[key] = value;
+      }
+      return table;
+    },
+
+    // Metatable functions
+    'getmetatable': (args) {
+      if (args.isEmpty) return null;
+      final value = args.first;
+      if (value is TableInstance) {
+        return value.metatable;
+      }
+      return null;
+    },
+    'setmetatable': (args) {
+      if (args.length < 2) return args.isNotEmpty ? args[0] : null;
+      final table = args[0];
+      final metatable = args[1];
+      if (table is! TableInstance) {
+        throw EvaluationException('setmetatable() requires a table');
+      }
+      if (metatable != null && metatable is! TableInstance) {
+        throw EvaluationException('metatable must be a table or nil');
+      }
+      table.metatable = metatable as TableInstance?;
+      return table;
     },
   };
 }

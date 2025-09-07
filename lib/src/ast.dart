@@ -40,6 +40,7 @@ abstract class Visitor<T> {
   T visitReturn(Return value) => visitStatement(value);
   T visitAssign(Assign value) => visitStatement(value);
   T visitCall(Call value) => visitStatement(value);
+  T visitCallFieldAccess(CallFieldAccess value) => visitStatement(value);
   T visitDo(Do value) => visitStatement(value);
   T visitWhile(While value) => visitStatement(value);
   T visitRepeat(Repeat value) => visitStatement(value);
@@ -235,6 +236,26 @@ class Call extends Statement implements Expression {
   bool operator ==(Object other) {
     return other is Call &&
         name == other.name &&
+        args.length == other.args.length &&
+        args.whereIndexed((i, e) => e == other.args[i]).length == args.length;
+  }
+}
+
+class CallFieldAccess extends Statement implements Expression {
+  final FieldAccess fieldAccess;
+  final List<Expression> args;
+  CallFieldAccess(this.fieldAccess, this.args);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitCallFieldAccess(this);
+
+  @override
+  int get hashCode => Object.hashAll([fieldAccess, ...args]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is CallFieldAccess &&
+        fieldAccess == other.fieldAccess &&
         args.length == other.args.length &&
         args.whereIndexed((i, e) => e == other.args[i]).length == args.length;
   }

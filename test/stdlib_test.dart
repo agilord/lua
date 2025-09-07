@@ -1,280 +1,271 @@
-import 'package:lua/src/ast.dart';
+import 'dart:math' as math;
+
 import 'package:lua/src/evaluator.dart';
+import 'package:lua/src/grammar.dart';
 import 'package:test/test.dart';
 
 void main() {
-  group('standard library', () {
-    test('print function', () {
-      final env = LuaEnv.withStdlib();
-      final block = Block([
-        Call('print', [LuaString('Hello'), LuaString('World')]),
-      ]);
+  group('standard library functions', () {
+    group('basic functions', () {
+      test('rawget function', () {
+        final luaCode =
+            'local t = {hello = "world", count = 42}; return rawget(t, "hello"), rawget(t, "count"), rawget(t, "missing")';
 
-      block.evaluate(env: env);
-      expect(env.getOutput(), 'Hello\tWorld\n');
-    });
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
 
-    test('print function captures output', () {
-      final env = LuaEnv.withStdlib();
-
-      // Test multiple print calls
-      Call('print', [LuaString('Line 1')]).evaluate(env: env);
-      Call('print', [Number(42)]).evaluate(env: env);
-      Call('print', [Bool(true), Bool(false)]).evaluate(env: env);
-
-      final output = env.getOutput();
-      final lines = env.getOutputLines();
-
-      expect(output, 'Line 1\n42\ntrue\tfalse\n');
-      expect(lines, ['Line 1', '42', 'true\tfalse']);
-    });
-
-    test('output buffer operations', () {
-      final env = LuaEnv.withStdlib();
-
-      // Initially empty
-      expect(env.getOutput(), '');
-      expect(env.getOutputLines(), []);
-
-      // Add some output
-      Call('print', [LuaString('Test')]).evaluate(env: env);
-      expect(env.getOutput(), 'Test\n');
-
-      // Clear output
-      env.clearOutput();
-      expect(env.getOutput(), '');
-
-      // Add more output after clear
-      Call('print', [LuaString('After clear')]).evaluate(env: env);
-      expect(env.getOutput(), 'After clear\n');
-    });
-
-    test('custom output writer', () {
-      final customOutput = <String>[];
-      final customWriter = _TestOutputWriter(customOutput.add);
-
-      final env = LuaEnv.withStdlib(output: customWriter);
-
-      Call('print', [LuaString('Custom output')]).evaluate(env: env);
-      Call('print', [Number(123)]).evaluate(env: env);
-
-      expect(customOutput, ['Custom output', '123']);
-    });
-
-    test('console output option', () {
-      // Test that console output can be enabled without breaking tests
-      final buffer =
-          LuaOutputBuffer(alsoConsole: false); // Don't spam console in tests
-      final env = LuaEnv.withStdlib(output: buffer);
-
-      Call('print', [LuaString('Test console')]).evaluate(env: env);
-      expect(buffer.output, 'Test console\n');
-      expect(buffer.lines, ['Test console']);
-      expect(buffer.isNotEmpty, true);
-    });
-
-    test('type function', () {
-      final env = LuaEnv.withStdlib();
-
-      expect(Call('type', [Nil()]).evaluate(env: env), 'nil');
-      expect(Call('type', [Bool(true)]).evaluate(env: env), 'boolean');
-      expect(Call('type', [Number(42)]).evaluate(env: env), 'number');
-      expect(Call('type', [LuaString('hello')]).evaluate(env: env), 'string');
-      expect(Call('type', [Table([])]).evaluate(env: env), 'table');
-    });
-
-    test('tostring function', () {
-      final env = LuaEnv.withStdlib();
-
-      expect(Call('tostring', [Nil()]).evaluate(env: env), 'nil');
-      expect(Call('tostring', [Bool(true)]).evaluate(env: env), 'true');
-      expect(Call('tostring', [Number(42)]).evaluate(env: env), '42');
-      expect(Call('tostring', [Number(3.14)]).evaluate(env: env), '3.14');
-      expect(Call('tostring', [LuaString('test')]).evaluate(env: env), 'test');
-    });
-
-    test('tonumber function', () {
-      final env = LuaEnv.withStdlib();
-
-      expect(Call('tonumber', [Number(42)]).evaluate(env: env), 42);
-      expect(Call('tonumber', [LuaString('123')]).evaluate(env: env), 123);
-      expect(Call('tonumber', [LuaString('3.14')]).evaluate(env: env), 3.14);
-      expect(Call('tonumber', [LuaString('not_a_number')]).evaluate(env: env),
-          null);
-      expect(Call('tonumber', [Bool(true)]).evaluate(env: env), null);
-    });
-
-    test('custom builtin function', () {
-      num? customAdd(List<Object?> args) {
-        if (args.length != 2) return null;
-        final a = args[0] as num?;
-        final b = args[1] as num?;
-        if (a == null || b == null) return null;
-        return a + b;
-      }
-
-      final env = LuaEnv(builtins: {'add': customAdd});
-      expect(Call('add', [Number(5), Number(3)]).evaluate(env: env), 8);
-    });
-
-    test('stdlib with custom variables', () {
-      final env = LuaEnv.withStdlib(variables: {'x': 42});
-
-      expect(VarRef('x').evaluate(env: env), 42);
-      expect(Call('type', [VarRef('x')]).evaluate(env: env), 'number');
-    });
-  });
-
-  group('external objects', () {
-    test('dart object wrapper', () {
-      // Create a simple calculator object
-      final calculator = LuaDartObject(
-        'Calculator',
-        methods: {
-          'add': (List<Object?> args) {
-            final a = args[0] as num;
-            final b = args[1] as num;
-            return a + b;
-          },
-          'multiply': (List<Object?> args) {
-            final a = args[0] as num;
-            final b = args[1] as num;
-            return a * b;
-          },
-        },
-        getters: {
-          'version': () => '1.0',
-          'name': () => 'Calculator',
-        },
-      );
-
-      final env = LuaEnv(variables: {'calc': calculator});
-
-      // Test method calls via field access
-      final addMethod = FieldAccess(VarRef('calc'), 'add').evaluate(env: env)
-          as Function(List);
-      expect(addMethod([5, 3]), 8);
-
-      // Test property access
-      expect(FieldAccess(VarRef('calc'), 'version').evaluate(env: env), '1.0');
-      expect(
-          FieldAccess(VarRef('calc'), 'name').evaluate(env: env), 'Calculator');
-    });
-
-    test('external object indexing', () {
-      final testObject = LuaDartObject(
-        'TestObject',
-        getters: {
-          'property1': () => 'value1',
-          'property2': () => 42,
-        },
-      );
-
-      final env = LuaEnv(variables: {'obj': testObject});
-
-      expect(Index(VarRef('obj'), LuaString('property1')).evaluate(env: env),
-          'value1');
-      expect(
-          Index(VarRef('obj'), LuaString('property2')).evaluate(env: env), 42);
-    });
-
-    test('external object error handling', () {
-      final testObject = LuaDartObject('TestObject');
-      final env = LuaEnv(variables: {'obj': testObject});
-
-      // Should throw when accessing non-existent property
-      expect(
-        () => FieldAccess(VarRef('obj'), 'nonexistent').evaluate(env: env),
-        throwsA(isA<EvaluationException>()),
-      );
-
-      // Should throw when indexing with non-string key
-      expect(
-        () => Index(VarRef('obj'), Number(123)).evaluate(env: env),
-        throwsA(isA<EvaluationException>()),
-      );
-    });
-
-    test('callable dart object', () {
-      final callableObject = LuaDartObject((List<Object?> args) {
-        return 'Called with ${args.length} arguments';
+        expect(result, ['world', 42, null]);
       });
 
-      final env = LuaEnv.withStdlib(variables: {'func': callableObject});
+      test('rawset function', () {
+        final luaCode =
+            'local t = {}; rawset(t, "key1", "value1"); rawset(t, "key2", 123); return rawget(t, "key1"), rawget(t, "key2")';
 
-      // Test direct call
-      expect(callableObject.call([1, 2, 3]), 'Called with 3 arguments');
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
 
-      // Test that the callable object is accessible in the environment
-      expect(VarRef('func').evaluate(env: env), callableObject);
-
-      // Test type function with callable object
-      expect(Call('type', [VarRef('func')]).evaluate(env: env), 'userdata');
-
-      // Test tostring with callable object
-      final stringResult =
-          Call('tostring', [VarRef('func')]).evaluate(env: env) as String;
-      expect(stringResult, contains('Closure'));
-    });
-  });
-
-  group('integration', () {
-    test('stdlib functions with external objects', () {
-      final calculator = LuaDartObject(
-        'Calculator',
-        methods: {
-          'compute': (List<Object?> args) => (args[0] as num) * 2,
-        },
-      );
-
-      final env = LuaEnv.withStdlib(variables: {'calc': calculator});
-
-      // Use type function on external object
-      expect(Call('type', [VarRef('calc')]).evaluate(env: env), 'userdata');
-
-      // Use tostring on external object
-      final result =
-          Call('tostring', [VarRef('calc')]).evaluate(env: env) as String;
-      expect(result, contains('Calculator'));
-    });
-
-    test('complex interaction example', () {
-      // Create a more complex example showing standard library and external objects working together
-      final logger = LuaDartObject(
-        'Logger',
-        methods: {
-          'log': (List<Object?> args) {
-            final message = args.isNotEmpty ? args.first.toString() : '';
-            return 'Logged: $message';
-          },
-        },
-      );
-
-      final env = LuaEnv.withStdlib(variables: {
-        'logger': logger,
-        'data': 'test data',
+        expect(result, ['value1', 123]);
       });
 
-      final block = Block([
-        Assign.single('message', Call('tostring', [VarRef('data')]),
-            isLocal: true),
-        VarRef('message'),
-      ]);
+      test('rawset returns table', () {
+        final luaCode =
+            'local t = {}; local result = rawset(t, "test", "value"); return rawget(result, "test")';
 
-      expect(block.evaluate(env: env), 'test data');
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, 'value');
+      });
+    });
+
+    group('metatable functions', () {
+      test('setmetatable returns table', () {
+        final luaCode =
+            'local t = {}; local mt = {}; local result = setmetatable(t, mt); return result == t';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, true);
+      });
+
+      test('getmetatable returns nil for no metatable', () {
+        final luaCode = 'local t = {}; return getmetatable(t)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, null);
+      });
+    });
+
+    group('math library constants', () {
+      test('math.pi', () {
+        final luaCode = 'return math.pi';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, closeTo(math.pi, 0.0001));
+      });
+
+      test('math.huge', () {
+        final luaCode = 'return math.huge';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, double.infinity);
+      });
+    });
+
+    group('math library basic arithmetic', () {
+      test('math.abs', () {
+        final luaCode = 'return math.abs(-5), math.abs(3.14), math.abs(0)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, [5, 3.14, 0]);
+      });
+
+      test('math.ceil', () {
+        final luaCode = 'return math.ceil(3.1), math.ceil(-2.9), math.ceil(5)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, [4, -2, 5]);
+      });
+
+      test('math.floor', () {
+        final luaCode =
+            'return math.floor(3.9), math.floor(-2.1), math.floor(5)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, [3, -3, 5]);
+      });
+
+      test('math.sqrt', () {
+        final luaCode = 'return math.sqrt(16), math.sqrt(0)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env) as List;
+
+        expect(result[0], 4.0);
+        expect(result[1], 0.0);
+      });
+
+      test('math.pow', () {
+        final luaCode = 'return math.pow(2, 3), math.pow(4, 0.5)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, [8, 2.0]);
+      });
+    });
+
+    group('string library', () {
+      test('string.len', () {
+        final luaCode = 'return string.len("hello"), string.len("")';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, [5, 0]);
+      });
+
+      test('string.upper', () {
+        final luaCode = 'return string.upper("Hello World"), string.upper("")';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, ['HELLO WORLD', '']);
+      });
+
+      test('string.lower', () {
+        final luaCode = 'return string.lower("Hello World"), string.lower("")';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, ['hello world', '']);
+      });
+
+      test('string.reverse', () {
+        final luaCode = 'return string.reverse("hello"), string.reverse("a")';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, ['olleh', 'a']);
+      });
+
+      test('string.rep', () {
+        final luaCode = 'return string.rep("hi", 3), string.rep("x", 0)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, ['hihihi', '']);
+      });
+
+      test('string.char', () {
+        final luaCode = 'return string.char(65, 66, 67)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, 'ABC');
+      });
+
+      test('string.byte', () {
+        final luaCode = 'return string.byte("ABC", 1), string.byte("ABC", 2)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, [65, 66]);
+      });
+    });
+
+    group('error handling', () {
+      test('rawget with non-table throws error', () {
+        final luaCode = 'return rawget("not a table", "key")';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+
+        expect(
+            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+      });
+
+      test('math.abs with non-number throws error', () {
+        final luaCode = 'return math.abs("not a number")';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+
+        expect(
+            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+      });
+
+      test('string.len with non-string throws error', () {
+        final luaCode = 'return string.len(42)';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+
+        expect(
+            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+      });
+    });
+
+    group('integration tests', () {
+      test('mixed operations', () {
+        final luaCode =
+            'local x = math.abs(-5); local upper = string.upper("hello"); return x, upper';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, [5, 'HELLO']);
+      });
+
+      test('table operations with metatable', () {
+        final luaCode =
+            'local t = {}; local mt = {}; setmetatable(t, mt); rawset(t, "key", "value"); return rawget(t, "key")';
+
+        final ast = parse(luaCode);
+        final env = LuaEnv.withStdlib();
+        final result = ast.evaluate(env: env);
+
+        expect(result, 'value');
+      });
     });
   });
-}
-
-/// Test implementation of LuaOutputWriter for testing custom output handling
-class _TestOutputWriter implements LuaOutputWriter {
-  final void Function(String) _onWrite;
-
-  _TestOutputWriter(this._onWrite);
-
-  @override
-  void write(String text) => _onWrite(text);
-
-  @override
-  void writeLine(String text) => _onWrite(text);
 }

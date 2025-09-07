@@ -55,6 +55,13 @@ class LuaGrammarDefinition extends GrammarDefinition {
                         (value[1] as SeparatedList)
                             .elements
                             .cast<Expression>());
+                  } else if (base is FieldAccess) {
+                    // Support method calls like math.abs() by creating a special call
+                    return CallFieldAccess(
+                        base,
+                        (value[1] as SeparatedList)
+                            .elements
+                            .cast<Expression>());
                   } else {
                     throw FormatException(
                         'Only simple function names are supported for calls: $base');
