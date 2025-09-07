@@ -1,9 +1,21 @@
 Lua language utilities in Dart.
 
-Supported features:
-- Abstract Syntax Tree (AST)
-- formatting code based on AST
+## Features
 
-Planned features:
-- Lua code parser (work started)
-- Lua code/AST evaluator (work started)
+- **Parser**: Parse Lua source code into Abstract Syntax Tree (AST)
+- **Evaluator**: Execute Lua code with support for variables, expressions, and control flow
+- **Formatter**: Format Lua AST back to clean source code
+- **Standard Library**: Built-in functions like print, type, tostring, tonumber (limited support, more to come)
+- **External Objects**: Integrate Dart objects and functions into Lua environment
+
+## Supported Lua Constructs
+
+- Variables and assignments (local and global)
+- Arithmetic expressions (`+, -, *, /, %, ^`)
+- Comparison operators (`<, >, <=, >=, ==, ~=`)
+- Logical operators (`and, or, not`)
+- String operations and concatenation
+- Tables (basic support)
+- Function calls
+- Control flow (if/else, while, for loops)
+- Function definitions and returns
