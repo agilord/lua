@@ -41,6 +41,7 @@ abstract class Visitor<T> {
   T visitAssign(Assign value) => visitStatement(value);
   T visitCall(Call value) => visitStatement(value);
   T visitCallFieldAccess(CallFieldAccess value) => visitStatement(value);
+  T visitCallExpression(CallExpression value) => visitStatement(value);
   T visitDo(Do value) => visitStatement(value);
   T visitWhile(While value) => visitStatement(value);
   T visitRepeat(Repeat value) => visitStatement(value);
@@ -48,6 +49,7 @@ abstract class Visitor<T> {
   T visitFor(For value) => visitStatement(value);
   T visitForEach(ForEach value) => visitStatement(value);
   T visitFunctionDef(FunctionDef value) => visitStatement(value);
+  T visitInlineFunction(InlineFunction value) => visitExpression(value);
 }
 
 abstract class Ast {
@@ -261,6 +263,29 @@ class CallFieldAccess extends Statement implements Expression {
   }
 }
 
+class CallExpression extends Statement implements Expression {
+  final Expression function;
+  final List<Expression> args;
+  CallExpression(this.function, this.args);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitCallExpression(this);
+
+  @override
+  int get hashCode => Object.hashAll([function, ...args]);
+
+  @override
+  bool operator ==(Object other) {
+    return other is CallExpression &&
+        function == other.function &&
+        args.length == other.args.length &&
+        args.whereIndexed((i, e) => e == other.args[i]).length == args.length;
+  }
+
+  @override
+  String toString() => '$function(${args.join(', ')})';
+}
+
 class Do extends Statement {
   final Block block;
   Do(this.block);
@@ -463,6 +488,26 @@ class InlineFunction extends Expression {
   final Block body;
 
   InlineFunction(this.args, this.body);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitInlineFunction(this);
+
+  @override
+  String toString() => 'function(${args.join(', ')}) ... end';
+
+  @override
+  int get hashCode => Object.hash(args, body);
+
+  @override
+  bool operator ==(Object other) {
+    return other is InlineFunction &&
+        other.args.length == args.length &&
+        other.args
+            .asMap()
+            .entries
+            .every((entry) => entry.value == args[entry.key]) &&
+        other.body == body;
+  }
 }
 
 class Nil extends Literal<Null> {

@@ -433,6 +433,28 @@ class _Context extends Visitor<Object?> {
   }
 
   @override
+  Object? visitCallExpression(CallExpression value) {
+    // Evaluate the function expression to get the function
+    final function = value.function.visit(this);
+    if (function is LuaFunction) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      return function(args);
+    } else if (function is _LuaFunction) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      final result = function.call(args);
+      // When used in expression context, unwrap single-element lists
+      if (result is List && result.length == 1) {
+        return result.first;
+      }
+      return result;
+    } else if (function is LuaExternalObject) {
+      final args = value.args.map((e) => e.visit(this)).toList();
+      return function.call(args);
+    }
+    throw EvaluationException('Cannot call expression result: $function');
+  }
+
+  @override
   Object? visitWhile(While value) {
     Object? lastValue;
     for (;;) {
@@ -637,6 +659,11 @@ class _Context extends Visitor<Object?> {
       c!.vars[value.name] = function;
     }
     return function;
+  }
+
+  @override
+  Object? visitInlineFunction(InlineFunction value) {
+    return _LuaFunction(value.args, value.body, this);
   }
 
   void _set(bool isLocal, String name, Object? value) {

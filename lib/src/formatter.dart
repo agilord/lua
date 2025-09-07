@@ -100,6 +100,11 @@ class _LuaFormatter extends Visitor<_Code> {
       '${value.name}(', value.args.map((e) => e.visit(this)), ', ', ')');
 
   @override
+  _Code visitCallExpression(CallExpression value) =>
+      _Code.compose('(', [value.function.visit(this)], '', ')').joinInline(
+          _Code.compose('(', value.args.map((e) => e.visit(this)), ', ', ')'));
+
+  @override
   _Code visitDo(Do value) =>
       _Code.withLines(['do', ...value.block.visit(this).indent().lines, 'end']);
 
@@ -171,6 +176,13 @@ class _LuaFormatter extends Visitor<_Code> {
       v = v.prefixFirst('local ');
     }
     return v
+        .joinDistinct(value.body.visit(this).indent())
+        .joinDistinct(_Code.line('end'));
+  }
+
+  @override
+  _Code visitInlineFunction(InlineFunction value) {
+    return _Code.line('function(${value.args.join(', ')})')
         .joinDistinct(value.body.visit(this).indent())
         .joinDistinct(_Code.line('end'));
   }

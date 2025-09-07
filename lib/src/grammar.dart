@@ -64,8 +64,12 @@ class LuaGrammarDefinition extends GrammarDefinition {
                             .elements
                             .cast<Expression>());
                   } else {
-                    throw FormatException(
-                        'Only simple function names are supported for calls: $base');
+                    // Support calling any expression (e.g., anonymous functions)
+                    return CallExpression(
+                        base,
+                        (value[1] as SeparatedList)
+                            .elements
+                            .cast<Expression>());
                   }
                 }),
         // Index access: expr[key]
@@ -258,6 +262,7 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(number),
         ref0(string),
         ref0(table),
+        ref0(inlineFunction),
         ref0(varRef),
         ref0(variadicArgs),
         (char('(').trim() & ref0(expression) & char(')').trim())
@@ -471,6 +476,20 @@ class LuaGrammarDefinition extends GrammarDefinition {
           value[6] as Block,
           isLocal: value[0] != null,
           hasVariadicArgs: paramList.hasVariadicArgs,
+        );
+      });
+
+  Parser<InlineFunction> inlineFunction() => (token('function'.toParser()) &
+              char('(') &
+              ref0(paramList) &
+              char(')') &
+              ref0(block) &
+              token('end'.toParser()))
+          .map((value) {
+        final paramList = value[2] as ParameterList;
+        return InlineFunction(
+          paramList.parameters,
+          value[4] as Block,
         );
       });
 
