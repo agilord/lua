@@ -162,12 +162,28 @@ class _Context extends Visitor<Object?> {
     if (value.values == null || value.values!.isEmpty) {
       throw _ReturnException(null);
     }
-    final evaluatedValues =
-        (value.values ?? const []).map((e) => e.visit(this)).toList();
-    if (evaluatedValues.length == 1) {
-      throw _ReturnException(evaluatedValues.single);
+
+    final flattenedValues = <Object?>[];
+    bool hasVariadicArgs = false;
+
+    for (final expr in value.values!) {
+      final result = expr.visit(this);
+      if (expr is VariadicArgs) {
+        hasVariadicArgs = true;
+        if (result is List) {
+          // Flatten variadic arguments
+          flattenedValues.addAll(result);
+        }
+      } else {
+        flattenedValues.add(result);
+      }
+    }
+
+    // If variadic arguments are involved, always return a list
+    if (hasVariadicArgs || flattenedValues.length > 1) {
+      throw _ReturnException(flattenedValues);
     } else {
-      throw _ReturnException(evaluatedValues);
+      throw _ReturnException(flattenedValues.single);
     }
   }
 
@@ -256,6 +272,16 @@ class _Context extends Visitor<Object?> {
 
   @override
   Object? visitVarRef(VarRef value) => lookup(value.name);
+
+  @override
+  List<Object?> visitVariadicArgs(VariadicArgs value) {
+    final variadicArgs = vars['...'];
+    if (variadicArgs is List<Object?>) {
+      return variadicArgs;
+    }
+    throw EvaluationException(
+        'Variadic arguments (...) can only be used inside variadic functions');
+  }
 
   @override
   Object? visitNegative(Negative value) {
@@ -563,7 +589,8 @@ class _Context extends Visitor<Object?> {
 
   @override
   Object? visitFunctionDef(FunctionDef value) {
-    final function = _LuaFunction(value.args, value.body, this);
+    final function = _LuaFunction(value.args, value.body, this,
+        hasVariadicArgs: value.hasVariadicArgs);
     if (value.isLocal) {
       vars[value.name] = function;
     } else {
@@ -681,15 +708,28 @@ class _LuaFunction {
   final List<String> parameters;
   final Block body;
   final _Context closure;
+  final bool hasVariadicArgs;
 
-  _LuaFunction(this.parameters, this.body, this.closure);
+  _LuaFunction(this.parameters, this.body, this.closure,
+      {this.hasVariadicArgs = false});
 
   Object? call(List<Object?> args) {
     final functionContext = _Context(parent: closure);
 
-    // Bind parameters
+    // Bind regular parameters
     for (int i = 0; i < parameters.length; i++) {
       functionContext.vars[parameters[i]] = i < args.length ? args[i] : null;
+    }
+
+    // Handle variadic arguments
+    if (hasVariadicArgs) {
+      // Collect extra arguments into a list
+      final variadicArgs = <Object?>[];
+      for (int i = parameters.length; i < args.length; i++) {
+        variadicArgs.add(args[i]);
+      }
+      // Store variadic arguments in a special variable
+      functionContext.vars['...'] = variadicArgs;
     }
 
     try {

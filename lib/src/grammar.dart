@@ -2,6 +2,13 @@ import 'package:lua/src/ast.dart';
 import 'package:petitparser/definition.dart';
 import 'package:petitparser/parser.dart';
 
+class _ParameterList {
+  final List<String> parameters;
+  final bool hasVariadicArgs;
+
+  _ParameterList(this.parameters, this.hasVariadicArgs);
+}
+
 final _parser = LuaGrammarDefinition().build<Block>();
 
 Block parse(String text) {
@@ -15,8 +22,10 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser<Block> start() => ref0(block).end();
   Parser token(Parser parser) => parser.flatten().trim();
 
-  Parser<Block> block() =>
-      ref0(statement).plusSeparated(anyOf(';\n')).map((v) => Block(v.elements));
+  Parser<Block> block() => ref0(statement)
+      .plusSeparated(anyOf(';\n'))
+      .optional()
+      .map((v) => Block(v?.elements.cast<Statement>() ?? <Statement>[]));
 
   Parser<Statement> statement() => <Parser<Statement>>[
         ref0(functionDef),
@@ -242,6 +251,7 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(string),
         ref0(table),
         ref0(varRef),
+        ref0(variadicArgs),
         (char('(').trim() & ref0(expression) & char(')').trim())
             .map((value) => value[1]),
       ].toChoiceParser().map((value) => value);
@@ -322,6 +332,9 @@ class LuaGrammarDefinition extends GrammarDefinition {
       .map((value) => value[1] as String);
 
   Parser<VarRef> varRef() => token(ref0(name)).map((value) => VarRef(value));
+
+  Parser<VariadicArgs> variadicArgs() =>
+      '...'.toParser().trim().map((value) => const VariadicArgs());
 
   Parser<String> name() => allowedChars().plusString();
   Parser<String> allowedChars() => anyCharExcept('[](){}:<!=>".\'+-*/% \t\n,');
@@ -429,24 +442,36 @@ class LuaGrammarDefinition extends GrammarDefinition {
       .map((v) => v.elements.cast<Expression>());
 
   Parser<FunctionDef> functionDef() => (token('local'.toParser()).optional() &
-          token('function'.toParser()) &
-          ref0(name) &
-          char('(') &
-          ref0(paramList) &
-          char(')') &
-          ref0(block) &
-          token('end'.toParser()))
-      .map((value) => FunctionDef(
-            value[2] as String,
-            value[4] as List<String>,
-            value[6] as Block,
-            isLocal: value[0] != null,
-          ));
+              token('function'.toParser()) &
+              token(ref0(name)) &
+              char('(') &
+              ref0(paramList) &
+              char(')') &
+              ref0(block) &
+              token('end'.toParser()))
+          .map((value) {
+        final paramList = value[4] as _ParameterList;
+        return FunctionDef(
+          value[2] as String,
+          paramList.parameters,
+          value[6] as Block,
+          isLocal: value[0] != null,
+          hasVariadicArgs: paramList.hasVariadicArgs,
+        );
+      });
 
-  Parser<List<String>> paramList() => ref0(name)
-      .plusSeparated(char(',').trim())
-      .optional()
-      .map((value) => value?.elements.cast<String>() ?? <String>[]);
+  Parser<_ParameterList> paramList() =>
+      ('...'.toParser().trim().map((value) => _ParameterList([], true)) |
+              (ref0(name).plusSeparated(char(',').trim()) &
+                      (char(',').trim() & '...'.toParser().trim()).optional())
+                  .map((value) {
+                final params =
+                    (value[0] as SeparatedList).elements.cast<String>();
+                final hasVariadic = value[1] != null;
+                return _ParameterList(params, hasVariadic);
+              }) |
+              epsilon().map((value) => _ParameterList([], false)))
+          .cast<_ParameterList>();
 
   Parser<Return> returnStatement() => (token('return'.toParser()) &
           ref0(expression).plusSeparated(char(',').trim()).optional())

@@ -25,6 +25,7 @@ abstract class Visitor<T> {
 
   T visitBlock(Block value) => visitAst(value);
   T visitVarRef(VarRef value) => visitExpression(value);
+  T visitVariadicArgs(VariadicArgs value) => visitExpression(value);
   T visitNil(Nil value) => visitExpression(value);
   T visitBool(Bool value) => visitExpression(value);
   T visitNumber(Number value) => visitExpression(value);
@@ -372,19 +373,22 @@ class FunctionDef extends Statement {
   final List<String> args;
   final Block body;
   final bool isLocal;
+  final bool hasVariadicArgs;
 
   FunctionDef(
     this.name,
     this.args,
     this.body, {
     this.isLocal = false,
+    this.hasVariadicArgs = false,
   });
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitFunctionDef(this);
 
   @override
-  int get hashCode => Object.hashAll([name, ...args, body, isLocal]);
+  int get hashCode =>
+      Object.hashAll([name, ...args, body, isLocal, hasVariadicArgs]);
 
   @override
   bool operator ==(Object other) {
@@ -393,7 +397,8 @@ class FunctionDef extends Statement {
         args.length == other.args.length &&
         args.whereIndexed((i, e) => e == other.args[i]).length == args.length &&
         body == other.body &&
-        isLocal == other.isLocal;
+        isLocal == other.isLocal &&
+        hasVariadicArgs == other.hasVariadicArgs;
   }
 }
 
@@ -921,5 +926,23 @@ class VarRef<E> extends Expression<E> {
   @override
   bool operator ==(Object other) {
     return other is VarRef && name == other.name;
+  }
+}
+
+class VariadicArgs extends Expression<List<Object?>> {
+  const VariadicArgs();
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitVariadicArgs(this);
+
+  @override
+  String toString() => '...';
+
+  @override
+  int get hashCode => 42; // Constant since there are no fields
+
+  @override
+  bool operator ==(Object other) {
+    return other is VariadicArgs;
   }
 }
