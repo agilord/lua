@@ -1,6 +1,7 @@
 import 'package:lua/src/ast.dart';
 import 'package:lua/src/evaluator.dart';
 import 'package:lua/src/grammar.dart';
+import 'package:petitparser/petitparser.dart';
 import 'package:test/test.dart';
 
 void main() {
@@ -174,9 +175,9 @@ void main() {
     final exprParser = grammar.buildFrom(grammar.expression());
 
     test('unterminated strings should fail parsing', () {
-      expect(exprParser.parse('"unterminated').isFailure, true);
-      expect(exprParser.parse("'unterminated").isFailure, true);
-      expect(exprParser.parse('[[unterminated').isFailure, true);
+      expect(exprParser.parse('"unterminated') is Failure, true);
+      expect(exprParser.parse("'unterminated") is Failure, true);
+      expect(exprParser.parse('[[unterminated') is Failure, true);
     });
 
     test('invalid escape sequences are handled', () {
@@ -186,7 +187,7 @@ void main() {
       // Invalid decimal escape (too high)
       expect(() {
         final result = exprParser.parse(r'"\999"');
-        if (result.isSuccess) {
+        if (result is Success) {
           final expr = result.value as LuaString;
           expr.evaluate(env: LuaEnv());
         }

@@ -10,14 +10,14 @@ void main() {
       final env = LuaEnv.withStdlib(variables: {'hub': staticHub});
 
       // Test add method
-      final addFunc =
-          FieldAccess(VarRef('hub'), 'add').evaluate(env: env) as Function;
+      final addFunc = FieldAccess(VarRef('hub'), 'add').evaluate(env: env)
+          as Function(List);
       final sum = addFunc([10, 5]);
       expect(sum, 15);
 
       // Test greet method
-      final greetFunc =
-          FieldAccess(VarRef('hub'), 'greet').evaluate(env: env) as Function;
+      final greetFunc = FieldAccess(VarRef('hub'), 'greet').evaluate(env: env)
+          as Function(List);
       final greeting = greetFunc(['Lua']);
       expect(greeting, 'Hello, Lua!');
 
@@ -51,20 +51,20 @@ void main() {
           LuaEnv.withStdlib(variables: {'flex': dynamicHub.toLuaObject()});
 
       // Test double method
-      final doubleFunc =
-          FieldAccess(VarRef('flex'), 'double').evaluate(env: env) as Function;
+      final doubleFunc = FieldAccess(VarRef('flex'), 'double')
+          .evaluate(env: env) as Function(List);
       final doubled = doubleFunc([21]);
       expect(doubled, 42);
 
       // Test reverse method
-      final reverseFunc =
-          FieldAccess(VarRef('flex'), 'reverse').evaluate(env: env) as Function;
+      final reverseFunc = FieldAccess(VarRef('flex'), 'reverse')
+          .evaluate(env: env) as Function(List);
       final reversed = reverseFunc(['hello']);
       expect(reversed, 'olleh');
 
       // Test factorial method
       final factorialFunc = FieldAccess(VarRef('flex'), 'factorial')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       final factorial = factorialFunc([5]);
       expect(factorial, 120);
 
@@ -74,14 +74,14 @@ void main() {
 
       // Test introspection methods
       final listMethodsFunc = FieldAccess(VarRef('flex'), 'listMethods')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       final methods = listMethodsFunc([]) as List;
       expect(methods, contains('double'));
       expect(methods, contains('reverse'));
       expect(methods, contains('factorial'));
 
       final hasMethodFunc = FieldAccess(VarRef('flex'), 'hasMethod')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       expect(hasMethodFunc(['double']), true);
       expect(hasMethodFunc(['nonexistent']), false);
     });
@@ -93,7 +93,7 @@ void main() {
       // Test math category
       final mathCategory = FieldAccess(VarRef('api'), 'math').evaluate(env: env)
           as LuaDartObject;
-      final sqrtFunc = mathCategory.getProperty('sqrt') as Function;
+      final sqrtFunc = mathCategory.getProperty('sqrt') as Function(List);
       final sqrt = sqrtFunc([16]);
       expect(sqrt, 4.0);
 
@@ -104,18 +104,18 @@ void main() {
       // Test string category
       final stringCategory = FieldAccess(VarRef('api'), 'string')
           .evaluate(env: env) as LuaDartObject;
-      final upperFunc = stringCategory.getProperty('upper') as Function;
+      final upperFunc = stringCategory.getProperty('upper') as Function(List);
       final upper = upperFunc(['hello']);
       expect(upper, 'HELLO');
 
-      final lengthFunc = stringCategory.getProperty('length') as Function;
+      final lengthFunc = stringCategory.getProperty('length') as Function(List);
       final length = lengthFunc(['test']);
       expect(length, 4);
 
       // Test array category
       final arrayCategory = FieldAccess(VarRef('api'), 'array')
           .evaluate(env: env) as LuaDartObject;
-      final joinFunc = arrayCategory.getProperty('join') as Function;
+      final joinFunc = arrayCategory.getProperty('join') as Function(List);
       final joined = joinFunc([
         ['a', 'b', 'c'],
         '-'
@@ -124,7 +124,7 @@ void main() {
 
       // Test hub methods
       final listCategoriesFunc = FieldAccess(VarRef('api'), 'listCategories')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       final categories = listCategoriesFunc([]) as List;
       expect(categories, containsAll(['math', 'string', 'array']));
     });
@@ -133,7 +133,7 @@ void main() {
       final pluginHub = PluginHub();
 
       // Register math plugin
-      pluginHub.registerPlugin('math', {
+      pluginHub.registerPlugin('math', <String, Function(List)>{
         'square': (args) => (args[0] as num) * (args[0] as num),
         'cube': (args) =>
             (args[0] as num) * (args[0] as num) * (args[0] as num),
@@ -148,7 +148,7 @@ void main() {
       });
 
       // Register string plugin
-      pluginHub.registerPlugin('string', {
+      pluginHub.registerPlugin('string', <String, Function(List)>{
         'palindrome': (args) {
           final str = (args[0] as String).toLowerCase();
           return str == str.split('').reversed.join();
@@ -167,33 +167,35 @@ void main() {
       // Test math plugin
       final mathPlugin = FieldAccess(VarRef('plugins'), 'math')
           .evaluate(env: env) as LuaDartObject;
-      final squareFunc = mathPlugin.getProperty('square') as Function;
+      final squareFunc = mathPlugin.getProperty('square') as Function(List);
       final squared = squareFunc([7]);
       expect(squared, 49);
 
-      final isPrimeFunc = mathPlugin.getProperty('isPrime') as Function;
+      final isPrimeFunc = mathPlugin.getProperty('isPrime') as Function(List);
       expect(isPrimeFunc([17]), true);
       expect(isPrimeFunc([18]), false);
 
       // Test string plugin
       final stringPlugin = FieldAccess(VarRef('plugins'), 'string')
           .evaluate(env: env) as LuaDartObject;
-      final palindromeFunc = stringPlugin.getProperty('palindrome') as Function;
+      final palindromeFunc =
+          stringPlugin.getProperty('palindrome') as Function(List);
       expect(palindromeFunc(['racecar']), true);
       expect(palindromeFunc(['hello']), false);
 
-      final capitalizeFunc = stringPlugin.getProperty('capitalize') as Function;
+      final capitalizeFunc =
+          stringPlugin.getProperty('capitalize') as Function(List);
       final capitalized = capitalizeFunc(['hello world']);
       expect(capitalized, 'Hello World');
 
       // Test plugin management
       final listPluginsFunc = FieldAccess(VarRef('plugins'), 'listPlugins')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       final plugins = listPluginsFunc([]) as List;
       expect(plugins, containsAll(['math', 'string']));
 
       final hasPluginFunc = FieldAccess(VarRef('plugins'), 'hasPlugin')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       expect(hasPluginFunc(['math']), true);
       expect(hasPluginFunc(['nonexistent']), false);
     });
@@ -204,13 +206,13 @@ void main() {
           LuaEnv.withStdlib(variables: {'state': stateHub.toLuaObject()});
 
       // Test storage methods
-      final storeFunc =
-          FieldAccess(VarRef('state'), 'store').evaluate(env: env) as Function;
+      final storeFunc = FieldAccess(VarRef('state'), 'store').evaluate(env: env)
+          as Function(List);
       storeFunc(['user', 'Alice']);
       storeFunc(['score', 95]);
 
       final retrieveFunc = FieldAccess(VarRef('state'), 'retrieve')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       final user = retrieveFunc(['user']);
       final score = retrieveFunc(['score']);
       expect(user, 'Alice');
@@ -218,7 +220,7 @@ void main() {
 
       // Test counter methods
       final incrementFunc = FieldAccess(VarRef('state'), 'increment')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       incrementFunc([]);
       incrementFunc([]);
 
@@ -237,26 +239,26 @@ void main() {
 
       // Test history
       final getHistoryFunc = FieldAccess(VarRef('state'), 'getHistory')
-          .evaluate(env: env) as Function;
+          .evaluate(env: env) as Function(List);
       final history = getHistoryFunc([]) as List;
       expect(history, contains('STORE user'));
       expect(history, contains('STORE score'));
       expect(history, contains('INCREMENT'));
 
       // Test key operations
-      final keysFunc =
-          FieldAccess(VarRef('state'), 'keys').evaluate(env: env) as Function;
+      final keysFunc = FieldAccess(VarRef('state'), 'keys').evaluate(env: env)
+          as Function(List);
       final keys = keysFunc([]) as List;
       expect(keys, containsAll(['user', 'score']));
 
-      final hasFunc =
-          FieldAccess(VarRef('state'), 'has').evaluate(env: env) as Function;
+      final hasFunc = FieldAccess(VarRef('state'), 'has').evaluate(env: env)
+          as Function(List);
       expect(hasFunc(['user']), true);
       expect(hasFunc(['nonexistent']), false);
 
       // Test clear
-      final clearFunc =
-          FieldAccess(VarRef('state'), 'clear').evaluate(env: env) as Function;
+      final clearFunc = FieldAccess(VarRef('state'), 'clear').evaluate(env: env)
+          as Function(List);
       clearFunc([]);
 
       final isEmptyAfterClear =
@@ -281,8 +283,8 @@ void main() {
       final env = LuaEnv.withStdlib(variables: {'hub': staticHub});
 
       // Test that we can use hub methods with print
-      final addFunc =
-          FieldAccess(VarRef('hub'), 'add').evaluate(env: env) as Function;
+      final addFunc = FieldAccess(VarRef('hub'), 'add').evaluate(env: env)
+          as Function(List);
       final sum = addFunc([10, 5]);
       Call('print', [LuaString('Sum:'), Number(sum as num)]).evaluate(env: env);
 

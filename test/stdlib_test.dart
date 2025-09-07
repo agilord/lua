@@ -151,8 +151,8 @@ void main() {
       final env = LuaEnv(variables: {'calc': calculator});
 
       // Test method calls via field access
-      final addMethod =
-          FieldAccess(VarRef('calc'), 'add').evaluate(env: env) as Function;
+      final addMethod = FieldAccess(VarRef('calc'), 'add').evaluate(env: env)
+          as Function(List);
       expect(addMethod([5, 3]), 8);
 
       // Test property access

@@ -12,13 +12,13 @@ void main() {
 
   // Call methods through field access
   final addFunc =
-      FieldAccess(VarRef('hub'), 'add').evaluate(env: env1) as Function;
+      FieldAccess(VarRef('hub'), 'add').evaluate(env: env1) as Function(List);
   final sum = addFunc([10, 5]);
   Call('print', [LuaString('10 + 5 ='), Number(sum as num)])
       .evaluate(env: env1);
 
   final greetFunc =
-      FieldAccess(VarRef('hub'), 'greet').evaluate(env: env1) as Function;
+      FieldAccess(VarRef('hub'), 'greet').evaluate(env: env1) as Function(List);
   final greeting = greetFunc(['Lua']);
   Call('print', [LuaString('Greeting:'), LuaString(greeting as String)])
       .evaluate(env: env1);
@@ -45,14 +45,14 @@ void main() {
 
   final env2 = LuaEnv.withStdlib(variables: {'flex': dynamicHub.toLuaObject()});
 
-  final doubleFunc =
-      FieldAccess(VarRef('flex'), 'double').evaluate(env: env2) as Function;
+  final doubleFunc = FieldAccess(VarRef('flex'), 'double').evaluate(env: env2)
+      as Function(List);
   final doubled = doubleFunc([21]);
   Call('print', [LuaString('Double 21:'), Number(doubled as num)])
       .evaluate(env: env2);
 
-  final factorialFunc =
-      FieldAccess(VarRef('flex'), 'factorial').evaluate(env: env2) as Function;
+  final factorialFunc = FieldAccess(VarRef('flex'), 'factorial')
+      .evaluate(env: env2) as Function(List);
   final factorial = factorialFunc([5]);
   Call('print', [LuaString('5! ='), Number(factorial as num)])
       .evaluate(env: env2);
@@ -67,7 +67,7 @@ void main() {
   // Access nested methods: api.math.sqrt(16)
   final mathCategory =
       FieldAccess(VarRef('api'), 'math').evaluate(env: env3) as LuaDartObject;
-  final sqrtFunc = mathCategory.getProperty('sqrt') as Function;
+  final sqrtFunc = mathCategory.getProperty('sqrt') as Function(List);
   final sqrt = sqrtFunc([16]);
   Call('print', [LuaString('sqrt(16) ='), Number(sqrt as num)])
       .evaluate(env: env3);
@@ -75,7 +75,7 @@ void main() {
   // Access string methods: api.string.upper("hello")
   final stringCategory =
       FieldAccess(VarRef('api'), 'string').evaluate(env: env3) as LuaDartObject;
-  final upperFunc = stringCategory.getProperty('upper') as Function;
+  final upperFunc = stringCategory.getProperty('upper') as Function(List);
   final upper = upperFunc(['hello']);
   Call('print', [LuaString('upper("hello") ='), LuaString(upper as String)])
       .evaluate(env: env3);
@@ -87,7 +87,7 @@ void main() {
   final pluginHub = PluginHub();
 
   // Register math plugin
-  pluginHub.registerPlugin('math', {
+  pluginHub.registerPlugin('math', <String, Function(List)>{
     'square': (args) => math.pow(args[0] as num, 2),
     'cube': (args) => math.pow(args[0] as num, 3),
     'isPrime': (args) {
@@ -101,7 +101,7 @@ void main() {
   });
 
   // Register string plugin
-  pluginHub.registerPlugin('string', {
+  pluginHub.registerPlugin('string', <String, Function(List)>{
     'palindrome': (args) {
       final str = (args[0] as String).toLowerCase();
       return str == str.split('').reversed.join();
@@ -119,14 +119,15 @@ void main() {
 
   final mathPlugin = FieldAccess(VarRef('plugins'), 'math').evaluate(env: env4)
       as LuaDartObject;
-  final squareFunc = mathPlugin.getProperty('square') as Function;
+  final squareFunc = mathPlugin.getProperty('square') as Function(List);
   final squared = squareFunc([7]);
   Call('print', [LuaString('Square of 7:'), Number(squared as num)])
       .evaluate(env: env4);
 
   final stringPlugin = FieldAccess(VarRef('plugins'), 'string')
       .evaluate(env: env4) as LuaDartObject;
-  final palindromeFunc = stringPlugin.getProperty('palindrome') as Function;
+  final palindromeFunc =
+      stringPlugin.getProperty('palindrome') as Function(List);
   final isPalindrome = palindromeFunc(['racecar']);
   Call('print', [
     LuaString('"racecar" is palindrome:'),
@@ -141,14 +142,14 @@ void main() {
   final env5 = LuaEnv.withStdlib(variables: {'state': stateHub.toLuaObject()});
 
   // Store some data
-  final storeFunc =
-      FieldAccess(VarRef('state'), 'store').evaluate(env: env5) as Function;
+  final storeFunc = FieldAccess(VarRef('state'), 'store').evaluate(env: env5)
+      as Function(List);
   storeFunc(['user', 'Alice']);
   storeFunc(['score', 95]);
 
   // Retrieve data
-  final retrieveFunc =
-      FieldAccess(VarRef('state'), 'retrieve').evaluate(env: env5) as Function;
+  final retrieveFunc = FieldAccess(VarRef('state'), 'retrieve')
+      .evaluate(env: env5) as Function(List);
   final user = retrieveFunc(['user']);
   final score = retrieveFunc(['score']);
   Call('print', [
@@ -159,8 +160,8 @@ void main() {
   ]).evaluate(env: env5);
 
   // Increment counter
-  final incrementFunc =
-      FieldAccess(VarRef('state'), 'increment').evaluate(env: env5) as Function;
+  final incrementFunc = FieldAccess(VarRef('state'), 'increment')
+      .evaluate(env: env5) as Function(List);
   incrementFunc([]);
   incrementFunc([]);
 
@@ -185,7 +186,7 @@ void main() {
 LuaDartObject createStaticHub() {
   return LuaDartObject(
     'StaticHub',
-    methods: {
+    methods: <String, Function(List)>{
       'add': (args) => (args[0] as num) + (args[1] as num),
       'subtract': (args) => (args[0] as num) - (args[1] as num),
       'multiply': (args) => (args[0] as num) * (args[1] as num),
@@ -210,7 +211,7 @@ class FlexibleHub {
   final Map<String, Function> _methods = {};
   final Map<String, Object?> _properties = {};
 
-  FlexibleHub addMethod(String name, Function method) {
+  FlexibleHub addMethod(String name, Function(List) method) {
     _methods[name] = method;
     return this;
   }
@@ -234,7 +235,7 @@ class FlexibleHub {
   List<String> getPropertyNames() => _properties.keys.toList();
 
   LuaDartObject toLuaObject() {
-    final allMethods = Map<String, Function>.from(_methods);
+    final allMethods = Map<String, Function(List)>.from(_methods);
 
     // Add introspection methods
     allMethods['listMethods'] = (args) => getMethodNames();
@@ -260,7 +261,7 @@ LuaDartObject createNestedHub() {
   // Math category
   final mathHub = LuaDartObject(
     'MathAPI',
-    methods: {
+    methods: <String, Function(List)>{
       'sqrt': (args) => math.sqrt(args[0] as num),
       'pow': (args) => math.pow(args[0] as num, args[1] as num),
       'sin': (args) => math.sin(args[0] as num),
@@ -280,7 +281,7 @@ LuaDartObject createNestedHub() {
   // String category
   final stringHub = LuaDartObject(
     'StringAPI',
-    methods: {
+    methods: <String, Function(List)>{
       'upper': (args) => (args[0] as String).toUpperCase(),
       'lower': (args) => (args[0] as String).toLowerCase(),
       'reverse': (args) => (args[0] as String).split('').reversed.join(),
@@ -296,7 +297,7 @@ LuaDartObject createNestedHub() {
   // Array category
   final arrayHub = LuaDartObject(
     'ArrayAPI',
-    methods: {
+    methods: <String, Function(List)>{
       'length': (args) => (args[0] as List).length,
       'join': (args) =>
           (args[0] as List).join(args.length > 1 ? args[1] as String : ','),
@@ -320,7 +321,7 @@ LuaDartObject createNestedHub() {
       'version': () => '2.0.0',
       'categories': () => ['math', 'string', 'array'],
     },
-    methods: {
+    methods: <String, Function(List)>{
       'listCategories': (args) => ['math', 'string', 'array'],
       'getCategory': (args) {
         switch (args[0] as String) {
@@ -363,7 +364,7 @@ class PluginHub {
 
   LuaDartObject toLuaObject() {
     final getters = <String, Object? Function()>{};
-    final methods = <String, Function>{};
+    final methods = <String, Function(List)>{};
 
     // Add each plugin as a property
     for (final entry in _plugins.entries) {
@@ -396,7 +397,7 @@ class StateHub {
   LuaDartObject toLuaObject() {
     return LuaDartObject(
       'StateHub',
-      methods: {
+      methods: <String, Function(List)>{
         // Storage methods
         'store': (args) {
           final key = args[0] as String;
