@@ -430,18 +430,17 @@ void main() {
       );
     });
 
-    // TODO: Fix local function parsing
-    // test('local function definition', () {
-    //   expect(
-    //     parseStmt('local function helper()\n  print()\nend'),
-    //     FunctionDef(
-    //       'helper',
-    //       [],
-    //       Block([Call('print', [])]),
-    //       isLocal: true,
-    //     ),
-    //   );
-    // });
+    test('local function definition', () {
+      expect(
+        parseStmt('local function helper() print() end'),
+        FunctionDef(
+          'helper',
+          [],
+          Block([Call('print', [])]),
+          isLocal: true,
+        ),
+      );
+    });
 
     test('return statement', () {
       expect(parseStmt('return'), Return());
