@@ -485,8 +485,75 @@ class _Context extends Visitor<Object?> {
 
   @override
   Object? visitForEach(ForEach value) {
-    // For now, just throw an exception - foreach needs iterator support
-    throw EvaluationException('ForEach is not implemented yet');
+    if (value.values.length != 1) {
+      throw EvaluationException(
+          'For-in loops currently support only single iterator expression');
+    }
+
+    final iterator = value.values.first.visit(this);
+
+    if (iterator is _LuaPairsIterator) {
+      // Handle pairs iterator
+      final context = _fork();
+      try {
+        while (true) {
+          final result = iterator.next();
+          if (result.length == 1 && result[0] == null) {
+            break; // End of iteration
+          }
+
+          // Assign iterator values to loop variables
+          for (int i = 0; i < value.names.length && i < result.length; i++) {
+            context.vars[value.names[i]] = result[i];
+          }
+
+          // Execute loop body
+          try {
+            value.block.visit(context);
+          } on _BreakException {
+            break;
+          } on _ReturnException {
+            rethrow;
+          }
+        }
+      } catch (e) {
+        if (e is _BreakException || e is _ReturnException) rethrow;
+        rethrow;
+      }
+    } else if (iterator is _LuaIpairsIterator) {
+      // Handle ipairs iterator
+      final context = _fork();
+      try {
+        while (true) {
+          final result = iterator.next();
+          if (result.length == 1 && result[0] == null) {
+            break; // End of iteration
+          }
+
+          // Assign iterator values to loop variables
+          for (int i = 0; i < value.names.length && i < result.length; i++) {
+            context.vars[value.names[i]] = result[i];
+          }
+
+          // Execute loop body
+          try {
+            value.block.visit(context);
+          } on _BreakException {
+            break;
+          } on _ReturnException {
+            rethrow;
+          }
+        }
+      } catch (e) {
+        if (e is _BreakException || e is _ReturnException) rethrow;
+        rethrow;
+      }
+    } else {
+      throw EvaluationException(
+          'For-in loop requires an iterator (use pairs() or ipairs())');
+    }
+
+    return null;
   }
 
   @override
@@ -680,6 +747,39 @@ class LuaDartObject extends LuaExternalObject {
 }
 
 /// Standard library functions for Lua
+/// Iterator for pairs() function - iterates over all key-value pairs in a table
+class _LuaPairsIterator {
+  final TableInstance table;
+  int _index = 0;
+
+  _LuaPairsIterator(this.table);
+
+  List<Object?> next() {
+    final entries = table.fields.entries.toList();
+    if (_index >= entries.length) {
+      return [null]; // End of iteration
+    }
+    final entry = entries[_index++];
+    return [entry.key, entry.value];
+  }
+}
+
+/// Iterator for ipairs() function - iterates over numeric indices only
+class _LuaIpairsIterator {
+  final TableInstance table;
+  int _index = 1; // Lua arrays start at 1
+
+  _LuaIpairsIterator(this.table);
+
+  List<Object?> next() {
+    final value = table.fields[_index];
+    if (value == null) {
+      return [null]; // End of iteration
+    }
+    return [_index++, value];
+  }
+}
+
 Map<String, LuaFunction> _getStandardLibrary(LuaOutputWriter output) {
   return {
     'print': (args) {
@@ -712,33 +812,21 @@ Map<String, LuaFunction> _getStandardLibrary(LuaOutputWriter output) {
       }
       return null;
     },
-    'ipairs': (args) {
-      if (args.isEmpty) return null;
-      final table = args.first;
-      if (table is! TableInstance) {
-        throw EvaluationException(
-            'bad argument #1 to \'ipairs\' (table expected)');
-      }
-      // Return an iterator function (simplified for now)
-      return (List<Object?> iterArgs) {
-        // This would normally return the next key-value pair
-        // For now, just return the table for basic compatibility
-        return table;
-      };
-    },
     'pairs': (args) {
       if (args.isEmpty) return null;
-      final table = args.first;
-      if (table is! TableInstance) {
-        throw EvaluationException(
-            'bad argument #1 to \'pairs\' (table expected)');
+      final value = args.first;
+      if (value is! TableInstance) {
+        throw EvaluationException('pairs() requires a table');
       }
-      // Return an iterator function (simplified for now)
-      return (List<Object?> iterArgs) {
-        // This would normally return the next key-value pair
-        // For now, just return the table for basic compatibility
-        return table;
-      };
+      return _LuaPairsIterator(value);
+    },
+    'ipairs': (args) {
+      if (args.isEmpty) return null;
+      final value = args.first;
+      if (value is! TableInstance) {
+        throw EvaluationException('ipairs() requires a table');
+      }
+      return _LuaIpairsIterator(value);
     },
   };
 }

@@ -384,7 +384,12 @@ class LuaGrammarDefinition extends GrammarDefinition {
           token('end'.toParser()))
       .map((value) => While(value[1] as Expression, value[3] as Block));
 
-  Parser<For> forStatement() => (token('for'.toParser()) &
+  Parser<Statement> forStatement() => <Parser<Statement>>[
+        ref0(forNumericStatement),
+        ref0(forInStatement),
+      ].toChoiceParser();
+
+  Parser<For> forNumericStatement() => (token('for'.toParser()) &
           ref0(name) &
           char('=').trim() &
           ref0(expression) &
@@ -401,6 +406,27 @@ class LuaGrammarDefinition extends GrammarDefinition {
             increment: (value[6] as List?)?[1] as Expression?,
             block: value[8] as Block,
           ));
+
+  Parser<ForEach> forInStatement() => (token('for'.toParser()) &
+          ref0(nameList) &
+          token('in'.toParser()) &
+          ref0(expressionList) &
+          token('do'.toParser()) &
+          ref0(block) &
+          token('end'.toParser()))
+      .map((value) => ForEach(
+            value[1] as List<String>,
+            value[3] as List<Expression>,
+            value[5] as Block,
+          ));
+
+  Parser<List<String>> nameList() => ref0(name)
+      .plusSeparated(char(',').trim())
+      .map((v) => v.elements.cast<String>());
+
+  Parser<List<Expression>> expressionList() => ref0(expression)
+      .plusSeparated(char(',').trim())
+      .map((v) => v.elements.cast<Expression>());
 
   Parser<FunctionDef> functionDef() => (token('local'.toParser()).optional() &
           token('function'.toParser()) &
