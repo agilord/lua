@@ -2,11 +2,11 @@ import 'package:lua/src/ast.dart';
 import 'package:petitparser/definition.dart';
 import 'package:petitparser/parser.dart';
 
-class _ParameterList {
+class ParameterList {
   final List<String> parameters;
   final bool hasVariadicArgs;
 
-  _ParameterList(this.parameters, this.hasVariadicArgs);
+  ParameterList(this.parameters, this.hasVariadicArgs);
 }
 
 final _parser = LuaGrammarDefinition().build<Block>();
@@ -450,7 +450,7 @@ class LuaGrammarDefinition extends GrammarDefinition {
               ref0(block) &
               token('end'.toParser()))
           .map((value) {
-        final paramList = value[4] as _ParameterList;
+        final paramList = value[4] as ParameterList;
         return FunctionDef(
           value[2] as String,
           paramList.parameters,
@@ -460,18 +460,18 @@ class LuaGrammarDefinition extends GrammarDefinition {
         );
       });
 
-  Parser<_ParameterList> paramList() =>
-      ('...'.toParser().trim().map((value) => _ParameterList([], true)) |
+  Parser<ParameterList> paramList() =>
+      ('...'.toParser().trim().map((value) => ParameterList([], true)) |
               (ref0(name).plusSeparated(char(',').trim()) &
                       (char(',').trim() & '...'.toParser().trim()).optional())
                   .map((value) {
                 final params =
                     (value[0] as SeparatedList).elements.cast<String>();
                 final hasVariadic = value[1] != null;
-                return _ParameterList(params, hasVariadic);
+                return ParameterList(params, hasVariadic);
               }) |
-              epsilon().map((value) => _ParameterList([], false)))
-          .cast<_ParameterList>();
+              epsilon().map((value) => ParameterList([], false)))
+          .cast<ParameterList>();
 
   Parser<Return> returnStatement() => (token('return'.toParser()) &
           ref0(expression).plusSeparated(char(',').trim()).optional())

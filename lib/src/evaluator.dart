@@ -443,8 +443,10 @@ class _Context extends Visitor<Object?> {
     final v = value.value.visit(this);
     if (v is TableInstance) {
       return v.fields.length;
+    } else if (v is String) {
+      return v.length;
     }
-    throw UnimplementedError();
+    throw EvaluationException('attempt to get length of a ${v.runtimeType}');
   }
 
   @override
