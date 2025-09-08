@@ -371,8 +371,10 @@ class LuaGrammarDefinition extends GrammarDefinition {
       (char('{').trim() & ref0(fieldListWithFullLineComments) & char('}'))
           .map((value) {
         final result = value[1] as Map<String, dynamic>;
-        return Table(result['fields'] as List<Field>,
-            result['comments'] as List<String>);
+        final fields = result['fields'] as List<Field>;
+        final comments = result['comments'] as List<String>;
+        final tableComment = comments.isNotEmpty ? comments.join('\n') : null;
+        return Table(fields, comment: tableComment);
       });
 
   Parser<List<Field>> fieldList() =>

@@ -67,6 +67,14 @@ class _Code {
 }
 
 class _LuaFormatter extends Visitor<_Code> {
+  // Helper method to add comment to code if present
+  _Code _addComment(_Code code, String? comment) {
+    if (comment != null && comment.isNotEmpty) {
+      return code.postfixLast(' --$comment');
+    }
+    return code;
+  }
+
   @override
   _Code visitBlock(Block value) {
     return _Code.withLines(
@@ -74,30 +82,35 @@ class _LuaFormatter extends Visitor<_Code> {
   }
 
   @override
-  _Code visitBreak(Break value) => _Code.line('break');
+  _Code visitBreak(Break value) =>
+      _addComment(_Code.line('break'), value.comment);
 
   @override
   _Code visitReturn(Return value) {
-    if (value.values == null || value.values!.isEmpty) {
-      return _Code.line('return');
-    }
-    return _Code.compose(
-        'return ', value.values!.map((e) => e.visit(this)), ', ', '');
+    final code = value.values == null || value.values!.isEmpty
+        ? _Code.line('return')
+        : _Code.compose(
+            'return ', value.values!.map((e) => e.visit(this)), ', ', '');
+    return _addComment(code, value.comment);
   }
 
   @override
   _Code visitAssign(Assign value) {
     final namesJoined = value.names.join(', ');
-    return _Code.compose(
+    final code = _Code.compose(
         value.isLocal ? 'local $namesJoined=' : '$namesJoined=',
         value.values.map((e) => e.visit(this)),
         ', ',
         '');
+    return _addComment(code, value.comment);
   }
 
   @override
-  _Code visitCall(Call value) => _Code.compose(
-      '${value.name}(', value.args.map((e) => e.visit(this)), ', ', ')');
+  _Code visitCall(Call value) {
+    final code = _Code.compose(
+        '${value.name}(', value.args.map((e) => e.visit(this)), ', ', ')');
+    return _addComment(code, value.comment);
+  }
 
   @override
   _Code visitCallExpression(CallExpression value) =>
@@ -188,7 +201,7 @@ class _LuaFormatter extends Visitor<_Code> {
   }
 
   @override
-  _Code visitNil(Nil value) => _Code.line('nil');
+  _Code visitNil(Nil value) => _addComment(_Code.line('nil'), value.comment);
 
   @override
   _Code visitBool(Bool value) => _Code.line(value.value ? 'true' : 'false');
@@ -204,7 +217,8 @@ class _LuaFormatter extends Visitor<_Code> {
   _Code visitNot(Not value) => value.value.visit(this).prefixFirst('not ');
 
   @override
-  _Code visitVarRef(VarRef value) => _Code.line(value.name);
+  _Code visitVarRef(VarRef value) =>
+      _addComment(_Code.line(value.name), value.comment);
 
   @override
   _Code visitAnd(And value) {
@@ -232,9 +246,11 @@ class _LuaFormatter extends Visitor<_Code> {
   _Code visitTable(Table value) {
     var v = _Code.line('{');
 
-    // Add full line comments (each on its own line)
-    for (final comment in value.lineComments) {
-      v = v.joinDistinct(_Code.line('--$comment'));
+    // Add table comment if present (each line on its own line)
+    if (value.comment != null && value.comment!.isNotEmpty) {
+      for (final commentLine in value.comment!.split('\n')) {
+        v = v.joinDistinct(_Code.line('--$commentLine'));
+      }
     }
 
     // Add fields
@@ -243,8 +259,8 @@ class _LuaFormatter extends Visitor<_Code> {
         v = v.postfixLast(', ');
       }
 
-      // If this is the first field and we have line comments, start on new line
-      if (i == 0 && value.lineComments.isNotEmpty) {
+      // If this is the first field and we have table comments, start on new line
+      if (i == 0 && value.comment != null && value.comment!.isNotEmpty) {
         v = v.joinDistinct(_Code.line('')); // Add a new line before first field
       }
 
@@ -255,7 +271,7 @@ class _LuaFormatter extends Visitor<_Code> {
             .joinInline(field.index!.visit(this))
             .joinInline(_Code.line(']='));
       } else if (field.name != null) {
-        if (i == 0 && value.lineComments.isNotEmpty) {
+        if (i == 0 && value.comment != null && value.comment!.isNotEmpty) {
           // For first field after comments, use inline join
           v = v.postfixLast('${field.name}=');
         } else {
@@ -270,8 +286,10 @@ class _LuaFormatter extends Visitor<_Code> {
       }
     }
 
-    // If we have line comments but no fields, add a newline before closing brace
-    if (value.lineComments.isNotEmpty && value.fields.isEmpty) {
+    // If we have table comments but no fields, add a newline before closing brace
+    if (value.comment != null &&
+        value.comment!.isNotEmpty &&
+        value.fields.isEmpty) {
       v = v.joinDistinct(_Code.line(''));
     }
 

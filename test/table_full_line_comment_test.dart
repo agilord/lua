@@ -13,9 +13,7 @@ void main() {
       final returnStmt = ast.statements.first as Return;
       final table = returnStmt.values?.first as Table;
       expect(table.fields.length, 1);
-      expect(table.lineComments.length, 1);
-
-      expect(table.lineComments[0], 'this is a comment');
+      expect(table.comment, 'this is a comment');
       expect(table.fields[0].name, 'a');
       expect((table.fields[0].value as Number).value, 1);
     });
@@ -33,9 +31,7 @@ void main() {
       final table = returnStmt.values?.first as Table;
 
       expect(table.fields.length, 2);
-      expect(table.lineComments.length, 2);
-      expect(table.lineComments[0], 'first comment');
-      expect(table.lineComments[1], 'second comment');
+      expect(table.comment, 'first comment\nsecond comment');
     });
 
     test('parse table with leading comments and field comments', () {
@@ -50,8 +46,7 @@ void main() {
       final table = returnStmt.values?.first as Table;
 
       expect(table.fields.length, 2);
-      expect(table.lineComments.length, 1);
-      expect(table.lineComments[0], 'configuration section');
+      expect(table.comment, 'configuration section');
       expect(table.fields[0].comment, 'enable debugging');
       expect(table.fields[1].comment, 'server port');
     });
@@ -67,9 +62,7 @@ void main() {
       final table = returnStmt.values?.first as Table;
 
       expect(table.fields.length, 0);
-      expect(table.lineComments.length, 2);
-      expect(table.lineComments[0], 'empty table with comments');
-      expect(table.lineComments[1], 'another comment');
+      expect(table.comment, 'empty table with comments\nanother comment');
     });
 
     test('parse table with leading comments only', () {
@@ -86,9 +79,7 @@ void main() {
       final table = returnStmt.values?.first as Table;
 
       expect(table.fields.length, 3);
-      expect(table.lineComments.length, 2);
-      expect(table.lineComments[0], 'first leading comment');
-      expect(table.lineComments[1], 'second leading comment');
+      expect(table.comment, 'first leading comment\nsecond leading comment');
       expect(table.fields[0].name, 'a');
       expect(table.fields[1].name, 'b');
       expect(table.fields[2].name, 'c');
@@ -124,7 +115,7 @@ void main() {
       final fields = [
         Field(name: 'test', value: Number(42)),
       ];
-      final table = Table(fields, ['configuration comment']);
+      final table = Table(fields, comment: 'configuration comment');
       final formatted = format(table);
 
       expect(formatted, '{\n--configuration comment\ntest=42}');
@@ -135,14 +126,14 @@ void main() {
         Field(name: 'a', value: Number(1)),
         Field(name: 'b', value: Number(2)),
       ];
-      final table = Table(fields, ['first comment', 'second comment']);
+      final table = Table(fields, comment: 'first comment\nsecond comment');
       final formatted = format(table);
 
       expect(formatted, '{\n--first comment\n--second comment\na=1, b=2}');
     });
 
     test('format empty table with comments', () {
-      final table = Table([], ['empty table comment']);
+      final table = Table([], comment: 'empty table comment');
       final formatted = format(table);
 
       expect(formatted, '{\n--empty table comment\n}');

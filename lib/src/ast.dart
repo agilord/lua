@@ -55,26 +55,28 @@ abstract class Visitor<T> {
 }
 
 abstract class Ast {
-  const Ast();
+  final String? comment;
+
+  const Ast({this.comment});
 
   T visit<T>(Visitor<T> visitor) => visitor.visitAst(this);
 }
 
 abstract class Statement extends Ast {
-  const Statement();
+  const Statement({super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitStatement(this);
 }
 
 abstract class Expression<E> extends Statement {
-  const Expression();
+  const Expression({super.comment});
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitExpression(this);
 }
 
 abstract class Literal<E> extends Expression<E> {
-  const Literal();
+  const Literal({super.comment});
 }
 
 extension BoolExpressionExt on Expression<bool> {
@@ -161,8 +163,8 @@ extension StringExt on String {
 class Block extends Ast {
   final List<Statement> statements;
 
-  Block(this.statements);
-  Block.empty() : statements = [];
+  Block(this.statements, {super.comment});
+  Block.empty({super.comment}) : statements = [];
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitBlock(this);
@@ -193,17 +195,20 @@ class Assign extends Statement {
     this.names,
     this.values, {
     this.isLocal = false,
+    super.comment,
   });
 
   factory Assign.single(
     String name,
     Expression value, {
     bool isLocal = false,
+    String? comment,
   }) =>
       Assign(
         [name],
         [value],
         isLocal: isLocal,
+        comment: comment,
       );
 
   @override
@@ -228,7 +233,7 @@ class Assign extends Statement {
 class Call extends Statement implements Expression {
   final String name;
   final List<Expression> args;
-  Call(this.name, this.args);
+  Call(this.name, this.args, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitCall(this);
@@ -248,7 +253,7 @@ class Call extends Statement implements Expression {
 class CallFieldAccess extends Statement implements Expression {
   final FieldAccess fieldAccess;
   final List<Expression> args;
-  CallFieldAccess(this.fieldAccess, this.args);
+  CallFieldAccess(this.fieldAccess, this.args, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitCallFieldAccess(this);
@@ -268,7 +273,7 @@ class CallFieldAccess extends Statement implements Expression {
 class CallExpression extends Statement implements Expression {
   final Expression function;
   final List<Expression> args;
-  CallExpression(this.function, this.args);
+  CallExpression(this.function, this.args, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitCallExpression(this);
@@ -290,7 +295,7 @@ class CallExpression extends Statement implements Expression {
 
 class Do extends Statement {
   final Block block;
-  Do(this.block);
+  Do(this.block, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitDo(this);
@@ -299,7 +304,7 @@ class Do extends Statement {
 class While extends Statement {
   final Expression condition;
   final Block block;
-  While(this.condition, this.block);
+  While(this.condition, this.block, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitWhile(this);
@@ -318,7 +323,7 @@ class While extends Statement {
 class Repeat extends Statement {
   final Block block;
   final Expression condition;
-  Repeat(this.block, this.condition);
+  Repeat(this.block, this.condition, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitRepeat(this);
@@ -335,6 +340,7 @@ class If extends Statement {
     this.block, {
     this.elseIfs,
     this.elseBlock,
+    super.comment,
   });
 
   @override
@@ -359,17 +365,19 @@ class If extends Statement {
 class ElseIf {
   final Expression condition;
   final Block block;
+  final String? comment;
 
-  ElseIf(this.condition, this.block);
+  ElseIf(this.condition, this.block, {this.comment});
 
   @override
-  int get hashCode => Object.hashAll([condition, block]);
+  int get hashCode => Object.hashAll([condition, block, comment]);
 
   @override
   bool operator ==(Object other) {
     return other is ElseIf &&
         condition == other.condition &&
-        block == other.block;
+        block == other.block &&
+        comment == other.comment;
   }
 }
 
@@ -386,6 +394,7 @@ class For extends Statement {
     required this.stop,
     this.increment,
     required this.block,
+    super.comment,
   });
 
   @override
@@ -410,7 +419,7 @@ class ForEach extends Statement {
   final List<Expression> values;
   final Block block;
 
-  ForEach(this.names, this.values, this.block);
+  ForEach(this.names, this.values, this.block, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitForEach(this);
@@ -429,6 +438,7 @@ class FunctionDef extends Statement {
     this.body, {
     this.isLocal = false,
     this.hasVariadicArgs = false,
+    super.comment,
   });
 
   @override
@@ -452,7 +462,7 @@ class FunctionDef extends Statement {
 
 class Return extends Statement {
   final List<Expression>? values;
-  Return({this.values});
+  Return({this.values, super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitReturn(this);
@@ -471,7 +481,7 @@ class Return extends Statement {
 }
 
 class Break extends Statement {
-  Break();
+  Break({super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitBreak(this);
@@ -489,7 +499,7 @@ class InlineFunction extends Expression {
   final List<String> args;
   final Block body;
 
-  InlineFunction(this.args, this.body);
+  InlineFunction(this.args, this.body, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitInlineFunction(this);
@@ -514,9 +524,10 @@ class InlineFunction extends Expression {
 
 class Nil extends Literal<Null> {
   static const _instance = Nil._();
-  const Nil._();
+  const Nil._({super.comment});
 
-  factory Nil() => _instance;
+  factory Nil({String? comment}) =>
+      comment == null ? _instance : Nil._(comment: comment);
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitNil(this);
@@ -524,7 +535,7 @@ class Nil extends Literal<Null> {
 
 class Bool extends Literal<bool> {
   final bool value;
-  const Bool(this.value);
+  const Bool(this.value, {super.comment});
 
   @override
   int get hashCode => value.hashCode;
@@ -540,7 +551,7 @@ class Bool extends Literal<bool> {
 
 class Number extends Literal<num> {
   final num value;
-  Number(this.value);
+  Number(this.value, {super.comment});
 
   @override
   int get hashCode => value.hashCode;
@@ -556,7 +567,7 @@ class Number extends Literal<num> {
 
 class LuaString extends Literal<String> {
   final String value;
-  LuaString(this.value);
+  LuaString(this.value, {super.comment});
 
   @override
   int get hashCode => value.hashCode;
@@ -572,12 +583,11 @@ class LuaString extends Literal<String> {
 
 class Table extends Expression<TableInstance> {
   final List<Field> fields;
-  final List<String> lineComments;
 
-  const Table(this.fields, [this.lineComments = const []]);
+  const Table(this.fields, {super.comment});
 
   @override
-  int get hashCode => Object.hashAll([fields, lineComments]);
+  int get hashCode => Object.hashAll([fields, comment]);
 
   @override
   bool operator ==(Object other) {
@@ -585,11 +595,7 @@ class Table extends Expression<TableInstance> {
         fields.length == other.fields.length &&
         fields.whereIndexed((i, e) => e == other.fields[i]).length ==
             fields.length &&
-        lineComments.length == other.lineComments.length &&
-        lineComments
-                .whereIndexed((i, e) => e == other.lineComments[i])
-                .length ==
-            lineComments.length;
+        comment == other.comment;
   }
 
   @override
@@ -630,7 +636,7 @@ class Index extends Expression {
   final Expression table;
   final Expression key;
 
-  Index(this.table, this.key);
+  Index(this.table, this.key, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitIndex(this);
@@ -648,7 +654,7 @@ class FieldAccess extends Expression {
   final Expression table;
   final String field;
 
-  FieldAccess(this.table, this.field);
+  FieldAccess(this.table, this.field, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitFieldAccess(this);
@@ -664,7 +670,7 @@ class FieldAccess extends Expression {
 
 class Negative extends Expression<num> {
   final Expression value;
-  Negative(this.value);
+  Negative(this.value, {super.comment});
 
   @override
   int get hashCode => value.hashCode + 1;
@@ -680,7 +686,7 @@ class Negative extends Expression<num> {
 
 class Not extends Expression<bool> {
   final Expression value;
-  Not(this.value);
+  Not(this.value, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitNot(this);
@@ -696,7 +702,7 @@ class Not extends Expression<bool> {
 
 class Length extends Expression<int> {
   final Expression value;
-  Length(this.value);
+  Length(this.value, {super.comment});
 
   @override
   int get hashCode => value.hashCode + 2;
@@ -712,7 +718,7 @@ class Length extends Expression<int> {
 
 class And extends Expression<bool> {
   final List<Expression> items;
-  And(this.items);
+  And(this.items, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitAnd(this);
@@ -732,7 +738,7 @@ class And extends Expression<bool> {
 class Or extends Expression<bool> {
   final List<Expression> items;
 
-  Or(this.items);
+  Or(this.items, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitOr(this);
@@ -753,7 +759,7 @@ class Equals extends Expression<bool> {
   final Expression left;
   final Expression right;
 
-  Equals(this.left, this.right);
+  Equals(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitEquals(this);
@@ -771,7 +777,7 @@ class NotEquals extends Expression<bool> {
   final Expression left;
   final Expression right;
 
-  NotEquals(this.left, this.right);
+  NotEquals(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitNotEquals(this);
@@ -789,7 +795,7 @@ class Less extends Expression<bool> {
   final Expression left;
   final Expression right;
 
-  Less(this.left, this.right);
+  Less(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitLess(this);
@@ -807,7 +813,7 @@ class LessEq extends Expression<bool> {
   final Expression left;
   final Expression right;
 
-  LessEq(this.left, this.right);
+  LessEq(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitLessEq(this);
@@ -825,7 +831,7 @@ class Greater extends Expression<bool> {
   final Expression left;
   final Expression right;
 
-  Greater(this.left, this.right);
+  Greater(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitGreater(this);
@@ -843,7 +849,7 @@ class GreaterEq extends Expression<bool> {
   final Expression left;
   final Expression right;
 
-  GreaterEq(this.left, this.right);
+  GreaterEq(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitGreaterEq(this);
@@ -860,7 +866,7 @@ class GreaterEq extends Expression<bool> {
 class Concatenate extends Expression<String> {
   final List<Expression> values;
 
-  Concatenate(this.values);
+  Concatenate(this.values, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitConcatenate(this);
@@ -880,7 +886,7 @@ class Concatenate extends Expression<String> {
 class Add extends Expression<num> {
   final List<Expression> values;
 
-  Add(this.values);
+  Add(this.values, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitAdd(this);
@@ -901,7 +907,7 @@ class Subtract extends Expression<num> {
   final Expression left;
   final Expression right;
 
-  Subtract(this.left, this.right);
+  Subtract(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitSubtract(this);
@@ -918,7 +924,7 @@ class Subtract extends Expression<num> {
 class Multiply extends Expression<num> {
   final List<Expression> values;
 
-  Multiply(this.values);
+  Multiply(this.values, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitMultiply(this);
@@ -939,7 +945,7 @@ class Divide extends Expression<num> {
   final Expression left;
   final Expression right;
 
-  Divide(this.left, this.right);
+  Divide(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitDivide(this);
@@ -957,7 +963,7 @@ class Modulo extends Expression<num> {
   final Expression left;
   final Expression right;
 
-  Modulo(this.left, this.right);
+  Modulo(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitModulo(this);
@@ -975,7 +981,7 @@ class Exponent extends Expression<num> {
   final Expression left;
   final Expression right;
 
-  Exponent(this.left, this.right);
+  Exponent(this.left, this.right, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitExponent(this);
@@ -992,7 +998,7 @@ class Exponent extends Expression<num> {
 class VarRef<E> extends Expression<E> {
   final String name;
 
-  const VarRef(this.name);
+  const VarRef(this.name, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitVarRef(this);
@@ -1007,7 +1013,7 @@ class VarRef<E> extends Expression<E> {
 }
 
 class VariadicArgs extends Expression<List<Object?>> {
-  const VariadicArgs();
+  const VariadicArgs({super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitVariadicArgs(this);
@@ -1027,7 +1033,7 @@ class VariadicArgs extends Expression<List<Object?>> {
 class SingleLineComment extends Statement {
   final String text;
 
-  SingleLineComment(this.text);
+  SingleLineComment(this.text, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitSingleLineComment(this);
@@ -1047,7 +1053,7 @@ class SingleLineComment extends Statement {
 class MultiLineComment extends Statement {
   final String text;
 
-  MultiLineComment(this.text);
+  MultiLineComment(this.text, {super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitMultiLineComment(this);
