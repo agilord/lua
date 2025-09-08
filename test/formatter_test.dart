@@ -124,7 +124,7 @@ void main() {
         )),
         'if x then\n'
         '  print()\n'
-        'elseif y\n'
+        'elseif y then\n'
         '  z()\n'
         'else\n'
         '  zz()\n'
@@ -399,7 +399,7 @@ void main() {
         )),
         'if x then\n'
         '  print()\n'
-        'elseif y\n'
+        'elseif y then\n'
         '  call()\n'
         'else\n'
         '  other()\n'

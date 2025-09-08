@@ -23,12 +23,23 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser token(Parser parser) => parser.flatten().trim();
 
   Parser<Block> block() {
-    // Simplified block parser: statements separated by newlines or semicolons
+    // Context-aware block parser that stops at terminating keywords
     final separator = (char(';') | char('\n')).star();
 
-    return (separator & ref0(statement).starSeparated(separator) & separator)
+    // Keywords that should terminate block parsing
+    final terminators = ['end', 'else', 'elseif', 'until']
+        .map((keyword) => keyword.toParser().trim())
+        .toList();
+
+    final terminator = terminators.toChoiceParser();
+
+    // Create a statement parser that won't consume terminators
+    final safeStatement = (terminator.not() & ref0(statement))
+        .map((value) => value[1] as Statement);
+
+    return (separator & safeStatement.starSeparated(separator) & separator)
         .map((value) {
-      final separatedList = value[1];
+      final separatedList = value[1] as SeparatedList;
       final statements = separatedList.elements.cast<Statement>();
       return Block(statements);
     });

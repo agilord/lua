@@ -155,6 +155,7 @@ class _LuaFormatter extends Visitor<_Code> {
       for (final e in value.elseIfs!) {
         v = v.joinDistinct(_Code.line('elseif ')
             .joinInline(e.condition.visit(this))
+            .postfixLast(' then')
             .joinDistinct(e.block.visit(this).indent()));
       }
     }
