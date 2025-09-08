@@ -572,18 +572,24 @@ class LuaString extends Literal<String> {
 
 class Table extends Expression<TableInstance> {
   final List<Field> fields;
+  final List<String> lineComments;
 
-  const Table(this.fields);
+  const Table(this.fields, [this.lineComments = const []]);
 
   @override
-  int get hashCode => Object.hashAll(fields);
+  int get hashCode => Object.hashAll([fields, lineComments]);
 
   @override
   bool operator ==(Object other) {
     return other is Table &&
         fields.length == other.fields.length &&
         fields.whereIndexed((i, e) => e == other.fields[i]).length ==
-            fields.length;
+            fields.length &&
+        lineComments.length == other.lineComments.length &&
+        lineComments
+                .whereIndexed((i, e) => e == other.lineComments[i])
+                .length ==
+            lineComments.length;
   }
 
   @override
@@ -594,11 +600,13 @@ class Field {
   final String? name;
   final Expression? index;
   final Expression value;
+  final String? comment;
 
   Field({
     this.name,
     this.index,
     required this.value,
+    this.comment,
   }) {
     if (name != null && index != null) {
       throw ArgumentError('Only one of `name` or `index` must be set.');
@@ -606,14 +614,15 @@ class Field {
   }
 
   @override
-  int get hashCode => Object.hashAll([name, index, value]);
+  int get hashCode => Object.hashAll([name, index, value, comment]);
 
   @override
   bool operator ==(Object other) {
     return other is Field &&
         name == other.name &&
         index == other.index &&
-        value == other.value;
+        value == other.value &&
+        comment == other.comment;
   }
 }
 

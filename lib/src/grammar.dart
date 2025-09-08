@@ -367,31 +367,112 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser<String> name() => allowedChars().plusString();
   Parser<String> allowedChars() => anyCharExcept('[](){}:<!=>".\'+-*/% \t\n,');
 
-  Parser<Table> table() => (char('{').trim() & ref0(fieldList) & char('}'))
-      .map((value) => Table(value[1] as List<Field>));
+  Parser<Table> table() =>
+      (char('{').trim() & ref0(fieldListWithFullLineComments) & char('}'))
+          .map((value) {
+        final result = value[1] as Map<String, dynamic>;
+        return Table(result['fields'] as List<Field>,
+            result['comments'] as List<String>);
+      });
 
-  Parser<List<Field>> fieldList() => (ref0(field)
-              .plusSeparated(char(',').trim()) &
-          char(',').trim().optional())
-      .optional()
-      .map((value) =>
-          (value?[0] as SeparatedList<Field, Object?>?)?.elements ?? <Field>[]);
+  Parser<List<Field>> fieldList() =>
+      ref0(fieldListWithComments).optional().map((value) => value ?? <Field>[]);
+
+  // Custom field list parser that handles comma-level comments
+  Parser<List<Field>> fieldListWithComments() {
+    final multiFieldParser = (ref0(field) &
+            (char(',').trim() & ref0(optionalInlineComment).optional())
+                .optional())
+        .plus()
+        .map((List<dynamic> pairs) {
+      final List<Field> fields = [];
+
+      for (int i = 0; i < pairs.length; i++) {
+        final pair = pairs[i] as List<dynamic>;
+        Field field = pair[0] as Field;
+        final commaInfo = pair[1] as List<dynamic>?;
+
+        // If there's a comma comment, associate it with this field
+        if (commaInfo != null && commaInfo[1] != null) {
+          final commaComment = commaInfo[1] as String;
+          // Create new field with combined comment
+          final existingComment = field.comment;
+          final combinedComment = existingComment != null
+              ? '$existingComment, $commaComment'
+              : commaComment;
+          field = Field(
+            name: field.name,
+            index: field.index,
+            value: field.value,
+            comment: combinedComment,
+          );
+        }
+
+        fields.add(field);
+      }
+
+      return fields;
+    });
+
+    final singleFieldParser = ref0(field).map((field) => [field]);
+
+    return [multiFieldParser, singleFieldParser].toChoiceParser();
+  }
+
+  // Parser for inline comments within tables (line comments without newlines)
+  Parser<String> tableLineComment() => ('--'.toParser() &
+          (char('[').not() & (char('\n') | endOfInput()).neg())
+              .star()
+              .flatten()
+              .trim()) // Trim whitespace from comment text
+      .map((value) => value[1] as String);
+
+  // Parser that handles both fields and full line comments within tables
+  Parser<Map<String, dynamic>> fieldListWithFullLineComments() {
+    // For now, fall back to the existing comma-separated field parsing
+    // and collect any line comments that appear at the start
+
+    // Parse leading comments
+    final leadingComments = ref0(tableLineComment).trim().star();
+
+    // Parse the field list using existing logic
+    final fieldList = ref0(fieldListWithComments).optional();
+
+    return (leadingComments & fieldList).map((value) {
+      final comments = value[0] as List<String>;
+      final fields = (value[1] as List<Field>?) ?? <Field>[];
+
+      return {
+        'fields': fields,
+        'comments': comments,
+      };
+    });
+  }
 
   Parser<Field> field() => <Parser<Field>>[
-        // Indexed field: [expr] = value
+        // Indexed field: [expr] = value -- comment
         (char('[').trim() &
                 ref0(expression) &
                 char(']').trim() &
                 char('=').trim() &
-                ref0(expression).trim())
+                ref0(expression).trim() &
+                ref0(optionalInlineComment))
             .map((value) => Field(
-                index: value[1] as Expression, value: value[4] as Expression)),
-        // Named field: name = value
-        (ref0(name).trim() & char('=').trim() & ref0(expression).trim()).map(
-            (value) =>
-                Field(name: value[0] as String, value: value[2] as Expression)),
-        // Array-style field: value (must come last)
-        ref0(expression).trim().map((value) => Field(value: value)),
+                index: value[1] as Expression,
+                value: value[4] as Expression,
+                comment: value[5] as String?)),
+        // Named field: name = value -- comment
+        (ref0(name).trim() &
+                char('=').trim() &
+                ref0(expression).trim() &
+                ref0(optionalInlineComment))
+            .map((value) => Field(
+                name: value[0] as String,
+                value: value[2] as Expression,
+                comment: value[3] as String?)),
+        // Array-style field: value -- comment (must come last)
+        (ref0(expression).trim() & ref0(optionalInlineComment)).map(
+            (value) => Field(value: value[0], comment: value[1] as String?)),
       ].toChoiceParser();
 
   Parser<String> identifier() => pattern('a-zA-Z_').plus().flatten().trim();
@@ -549,6 +630,18 @@ class LuaGrammarDefinition extends GrammarDefinition {
           ']]'.toParser().neg().star().flatten() &
           ']]'.toParser())
       .map((value) => MultiLineComment(value[1] as String));
+
+  // Helper parser for optional inline field comments
+  // Only matches if not followed by end of table or newline (for table trailing comments)
+  Parser<String?> optionalInlineComment() => ('--'.toParser() &
+          (char('[').not() &
+                  char('}').not() &
+                  (char('\n') | char(',') | endOfInput()).neg())
+              .plus() // require at least one character (not empty comment)
+              .flatten()
+              .trim())
+      .map((value) => (value[1] as String).trim())
+      .optional();
 }
 
 Parser<String> anyCharExcept(String except,

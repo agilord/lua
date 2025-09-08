@@ -231,10 +231,23 @@ class _LuaFormatter extends Visitor<_Code> {
   @override
   _Code visitTable(Table value) {
     var v = _Code.line('{');
+
+    // Add full line comments (each on its own line)
+    for (final comment in value.lineComments) {
+      v = v.joinDistinct(_Code.line('--$comment'));
+    }
+
+    // Add fields
     for (var i = 0; i < value.fields.length; i++) {
       if (i > 0) {
         v = v.postfixLast(', ');
       }
+
+      // If this is the first field and we have line comments, start on new line
+      if (i == 0 && value.lineComments.isNotEmpty) {
+        v = v.joinDistinct(_Code.line('')); // Add a new line before first field
+      }
+
       final field = value.fields[i];
       if (field.index != null) {
         v = v
@@ -242,10 +255,26 @@ class _LuaFormatter extends Visitor<_Code> {
             .joinInline(field.index!.visit(this))
             .joinInline(_Code.line(']='));
       } else if (field.name != null) {
-        v = v.postfixLast('${field.name}=');
+        if (i == 0 && value.lineComments.isNotEmpty) {
+          // For first field after comments, use inline join
+          v = v.postfixLast('${field.name}=');
+        } else {
+          v = v.postfixLast('${field.name}=');
+        }
       }
       v = v.joinInline(field.value.visit(this));
+
+      // Add field comment if present
+      if (field.comment != null) {
+        v = v.postfixLast(' --${field.comment}');
+      }
     }
+
+    // If we have line comments but no fields, add a newline before closing brace
+    if (value.lineComments.isNotEmpty && value.fields.isEmpty) {
+      v = v.joinDistinct(_Code.line(''));
+    }
+
     return v.postfixLast('}');
   }
 
