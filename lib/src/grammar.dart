@@ -175,8 +175,10 @@ class LuaGrammarDefinition extends GrammarDefinition {
 
   // Level 5: +, - (addition, subtraction)
   Parser<Expression> additiveExpression() {
+    // Use negative lookahead to prevent matching '--' as subtraction
+    final subtractOp = (char('-') & char('-').not()).flatten().trim();
     return ref0(multiplicativeExpression)
-        .seq((char('+').trim() | char('-').trim())
+        .seq((char('+').trim() | subtractOp)
             .seq(ref0(multiplicativeExpression))
             .star())
         .map((value) {
@@ -229,7 +231,9 @@ class LuaGrammarDefinition extends GrammarDefinition {
 
   // Level 7: not, -, # (unary operators)
   Parser<Expression> unaryExpression() {
-    return (token('not'.toParser()) | char('-').trim() | char('#').trim())
+    // Use negative lookahead to prevent matching '--' as unary minus
+    final unaryMinusOp = (char('-') & char('-').not()).flatten().trim();
+    return (token('not'.toParser()) | unaryMinusOp | char('#').trim())
         .optional()
         .seq(ref0(exponentiationExpression))
         .map((value) {

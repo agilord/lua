@@ -233,4 +233,54 @@ void main() {
       expect(singleLine, isNot(equals(multiLine)));
     });
   });
+
+  group('inline comment tests', () {
+    test('parse inline comment after method call', () {
+      final code = 'hub.call(id, "test", value) -- external call';
+      final ast = parse(code);
+
+      expect(ast.statements.length, 2);
+      expect(ast.statements[0], isA<CallFieldAccess>());
+      expect(ast.statements[1], isA<SingleLineComment>());
+
+      final comment = ast.statements[1] as SingleLineComment;
+      expect(comment.text, ' external call');
+    });
+
+    test('parse inline comment after function call', () {
+      final code = 'print("hello") -- output';
+      final ast = parse(code);
+
+      expect(ast.statements.length, 2);
+      expect(ast.statements[0], isA<Call>());
+      expect(ast.statements[1], isA<SingleLineComment>());
+
+      final comment = ast.statements[1] as SingleLineComment;
+      expect(comment.text, ' output');
+    });
+  });
+}
+
+// Test external object implementation for inline comment tests
+class TestHub extends LuaExternalObject {
+  @override
+  Object? call(List<Object?> args) {
+    return 'Hub called with ${args.length} arguments';
+  }
+
+  @override
+  Object? getProperty(String name) {
+    switch (name) {
+      case 'setValue':
+        return (List<Object?> args) =>
+            'Set value to ${args.isNotEmpty ? args.first : 'null'}';
+      default:
+        return null;
+    }
+  }
+
+  @override
+  void setProperty(String name, Object? value) {
+    // Not implemented for this test
+  }
 }
