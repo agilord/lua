@@ -364,10 +364,12 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser<Table> table() => (char('{').trim() & ref0(fieldList) & char('}'))
       .map((value) => Table(value[1] as List<Field>));
 
-  Parser<List<Field>> fieldList() => ref0(field)
-      .plusSeparated(char(',').trim())
+  Parser<List<Field>> fieldList() => (ref0(field)
+              .plusSeparated(char(',').trim()) &
+          char(',').trim().optional())
       .optional()
-      .map((value) => value?.elements ?? <Field>[]);
+      .map((value) =>
+          (value?[0] as SeparatedList<Field, Object?>?)?.elements ?? <Field>[]);
 
   Parser<Field> field() => <Parser<Field>>[
         // Indexed field: [expr] = value
