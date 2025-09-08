@@ -22,12 +22,21 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser<Block> start() => ref0(block).end();
   Parser token(Parser parser) => parser.flatten().trim();
 
-  Parser<Block> block() => ref0(statement)
-      .plusSeparated(anyOf(';\n'))
-      .optional()
-      .map((v) => Block(v?.elements.cast<Statement>() ?? <Statement>[]));
+  Parser<Block> block() {
+    // Custom block parser that handles newline-consuming statements
+    final separator = (char(';') | char('\n')).optional();
+    return (ref0(statement) & separator).star().map((pairs) {
+      final statements = <Statement>[];
+      for (final pair in pairs) {
+        statements.add(pair[0] as Statement);
+      }
+      return Block(statements);
+    });
+  }
 
   Parser<Statement> statement() => <Parser<Statement>>[
+        ref0(multiLineComment),
+        ref0(singleLineComment),
         ref0(functionDef),
         ref0(ifStatement),
         ref0(whileStatement),
@@ -520,6 +529,17 @@ class LuaGrammarDefinition extends GrammarDefinition {
       token('true'.toParser()).map((value) => Bool(true));
   Parser<Bool> boolFalse() =>
       token('false'.toParser()).map((value) => Bool(false));
+
+  Parser<SingleLineComment> singleLineComment() => ('--'.toParser() &
+          (char('[').not() & (char('\n') | endOfInput()).neg())
+              .star()
+              .flatten())
+      .map((value) => SingleLineComment(value[1] as String));
+
+  Parser<MultiLineComment> multiLineComment() => ('--[['.toParser() &
+          ']]'.toParser().neg().star().flatten() &
+          ']]'.toParser())
+      .map((value) => MultiLineComment(value[1] as String));
 }
 
 Parser<String> anyCharExcept(String except,

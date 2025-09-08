@@ -322,4 +322,12 @@ class _LuaFormatter extends Visitor<_Code> {
   @override
   _Code visitExponent(Exponent value) =>
       _visitBinOp(value.left, '^', value.right);
+
+  @override
+  _Code visitSingleLineComment(SingleLineComment value) =>
+      _Code.line('--${value.text}');
+
+  @override
+  _Code visitMultiLineComment(MultiLineComment value) =>
+      _Code.line('--[[${value.text}]]');
 }

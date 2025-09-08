@@ -50,6 +50,8 @@ abstract class Visitor<T> {
   T visitForEach(ForEach value) => visitStatement(value);
   T visitFunctionDef(FunctionDef value) => visitStatement(value);
   T visitInlineFunction(InlineFunction value) => visitExpression(value);
+  T visitSingleLineComment(SingleLineComment value) => visitStatement(value);
+  T visitMultiLineComment(MultiLineComment value) => visitStatement(value);
 }
 
 abstract class Ast {
@@ -1011,4 +1013,44 @@ class VariadicArgs extends Expression<List<Object?>> {
   bool operator ==(Object other) {
     return other is VariadicArgs;
   }
+}
+
+class SingleLineComment extends Statement {
+  final String text;
+
+  SingleLineComment(this.text);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitSingleLineComment(this);
+
+  @override
+  int get hashCode => text.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is SingleLineComment && text == other.text;
+  }
+
+  @override
+  String toString() => '--$text';
+}
+
+class MultiLineComment extends Statement {
+  final String text;
+
+  MultiLineComment(this.text);
+
+  @override
+  T visit<T>(Visitor<T> visitor) => visitor.visitMultiLineComment(this);
+
+  @override
+  int get hashCode => text.hashCode;
+
+  @override
+  bool operator ==(Object other) {
+    return other is MultiLineComment && text == other.text;
+  }
+
+  @override
+  String toString() => '--[[$text]]';
 }

@@ -666,6 +666,16 @@ class _Context extends Visitor<Object?> {
     return _LuaFunction(value.args, value.body, this);
   }
 
+  @override
+  Object? visitSingleLineComment(SingleLineComment value) {
+    return null;
+  }
+
+  @override
+  Object? visitMultiLineComment(MultiLineComment value) {
+    return null;
+  }
+
   void _set(bool isLocal, String name, Object? value) {
     if (isLocal) {
       if (vars.containsKey(name)) {
