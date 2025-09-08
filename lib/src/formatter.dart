@@ -246,51 +246,65 @@ class _LuaFormatter extends Visitor<_Code> {
   _Code visitTable(Table value) {
     var v = _Code.line('{');
 
-    // Add table comment if present (each line on its own line)
-    if (value.comment != null && value.comment!.isNotEmpty) {
-      for (final commentLine in value.comment!.split('\n')) {
-        v = v.joinDistinct(_Code.line('--$commentLine'));
-      }
-    }
-
-    // Add fields
+    // Add fields with their comments
     for (var i = 0; i < value.fields.length; i++) {
+      final field = value.fields[i];
+
+      // Add preceding comments for this field (preceding block comments)
+      if (field.comment != null && field.comment!.isNotEmpty) {
+        final commentLines = field.comment!.split('\n');
+
+        // Separate preceding comments from inline comments
+        final precedingComments = <String>[];
+        String? inlineComment;
+
+        for (final line in commentLines) {
+          if (line.trim().isEmpty) continue;
+          // If it looks like an inline comment (single word/phrase), treat as inline
+          if (commentLines.length == 1 || line.split(' ').length <= 3) {
+            inlineComment ??= line;
+          } else {
+            // Multi-line or complex comments are treated as preceding
+            precedingComments.add(line);
+          }
+        }
+
+        // Add preceding comments before the field
+        for (final comment in precedingComments) {
+          v = v.joinDistinct(_Code.line('--$comment'));
+        }
+
+        // Store inline comment for later
+        if (inlineComment != null && precedingComments.isEmpty) {
+          // If no preceding comments, treat the single comment as inline
+        }
+      }
+
+      // Add comma separator if not the first field
       if (i > 0) {
         v = v.postfixLast(', ');
       }
 
-      // If this is the first field and we have table comments, start on new line
-      if (i == 0 && value.comment != null && value.comment!.isNotEmpty) {
-        v = v.joinDistinct(_Code.line('')); // Add a new line before first field
-      }
-
-      final field = value.fields[i];
+      // Add the field content
       if (field.index != null) {
         v = v
             .joinInline(_Code.line('['))
             .joinInline(field.index!.visit(this))
             .joinInline(_Code.line(']='));
       } else if (field.name != null) {
-        if (i == 0 && value.comment != null && value.comment!.isNotEmpty) {
-          // For first field after comments, use inline join
-          v = v.postfixLast('${field.name}=');
-        } else {
-          v = v.postfixLast('${field.name}=');
-        }
+        v = v.postfixLast('${field.name}=');
       }
       v = v.joinInline(field.value.visit(this));
 
-      // Add field comment if present
-      if (field.comment != null) {
-        v = v.postfixLast(' --${field.comment}');
+      // Add inline comment if present
+      if (field.comment != null && field.comment!.isNotEmpty) {
+        final commentLines = field.comment!.split('\n');
+        // Use the last/single line as inline comment
+        final lastComment = commentLines.last.trim();
+        if (lastComment.isNotEmpty) {
+          v = v.postfixLast(' --$lastComment');
+        }
       }
-    }
-
-    // If we have table comments but no fields, add a newline before closing brace
-    if (value.comment != null &&
-        value.comment!.isNotEmpty &&
-        value.fields.isEmpty) {
-      v = v.joinDistinct(_Code.line(''));
     }
 
     return v.postfixLast('}');

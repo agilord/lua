@@ -367,14 +367,12 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser<String> name() => allowedChars().plusString();
   Parser<String> allowedChars() => anyCharExcept('[](){}:<!=>".\'+-*/% \t\n,');
 
-  Parser<Table> table() =>
-      (char('{').trim() & ref0(fieldListWithFullLineComments) & char('}'))
+  Parser<Table> table() => (char('{').trim() &
+              ref0(fieldListWithMiddleComments).optional() &
+              char('}'))
           .map((value) {
-        final result = value[1] as Map<String, dynamic>;
-        final fields = result['fields'] as List<Field>;
-        final comments = result['comments'] as List<String>;
-        final tableComment = comments.isNotEmpty ? comments.join('\n') : null;
-        return Table(fields, comment: tableComment);
+        final fields = (value[1] as List<Field>?) ?? <Field>[];
+        return Table(fields);
       });
 
   Parser<List<Field>> fieldList() =>
@@ -429,26 +427,56 @@ class LuaGrammarDefinition extends GrammarDefinition {
               .trim()) // Trim whitespace from comment text
       .map((value) => value[1] as String);
 
-  // Parser that handles both fields and full line comments within tables
-  Parser<Map<String, dynamic>> fieldListWithFullLineComments() {
-    // For now, fall back to the existing comma-separated field parsing
-    // and collect any line comments that appear at the start
+  // Parser that handles fields with middle comments
+  Parser<List<Field>> fieldListWithMiddleComments() {
+    // Parse field with optional preceding comments, comma, and possible trailing comma
+    final fieldWithComments = (ref0(tableLineComment).trim().star() &
+            ref0(field) &
+            (char(',').trim() & ref0(optionalInlineComment).optional())
+                .optional())
+        .map((value) {
+      final precedingComments = value[0] as List<String>;
+      Field field = value[1] as Field;
+      final commaInfo = value[2] as List<dynamic>?;
 
-    // Parse leading comments
-    final leadingComments = ref0(tableLineComment).trim().star();
+      // Handle comma-level comments (like the existing logic)
+      if (commaInfo != null && commaInfo[1] != null) {
+        final commaComment = commaInfo[1] as String;
+        final existingComment = field.comment;
+        final combinedComment = existingComment != null
+            ? '$existingComment, $commaComment'
+            : commaComment;
+        field = Field(
+          name: field.name,
+          index: field.index,
+          value: field.value,
+          comment: combinedComment,
+        );
+      }
 
-    // Parse the field list using existing logic
-    final fieldList = ref0(fieldListWithComments).optional();
+      // If there are preceding comments, attach them to the field
+      if (precedingComments.isNotEmpty) {
+        final precedingComment = precedingComments.join('\n');
+        final existingComment = field.comment;
+        final combinedComment = existingComment != null
+            ? '$precedingComment\n$existingComment'
+            : precedingComment;
+        field = Field(
+          name: field.name,
+          index: field.index,
+          value: field.value,
+          comment: combinedComment,
+        );
+      }
 
-    return (leadingComments & fieldList).map((value) {
-      final comments = value[0] as List<String>;
-      final fields = (value[1] as List<Field>?) ?? <Field>[];
-
-      return {
-        'fields': fields,
-        'comments': comments,
-      };
+      return field;
     });
+
+    // Handle single field or multiple fields
+    final singleField = fieldWithComments.map((field) => [field]);
+    final multipleFields = fieldWithComments.plus();
+
+    return [multipleFields, singleField].toChoiceParser();
   }
 
   Parser<Field> field() => <Parser<Field>>[
