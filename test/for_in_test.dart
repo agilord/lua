@@ -74,8 +74,10 @@ void main() {
       ast.evaluate(env: env);
 
       final output = env.getOutput();
-      expect(output.trim(),
-          isEmpty); // Empty table should not iterate, so no output
+      expect(
+        output.trim(),
+        isEmpty,
+      ); // Empty table should not iterate, so no output
     });
   });
 

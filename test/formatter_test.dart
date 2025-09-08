@@ -15,11 +15,13 @@ void main() {
       expect(format(LuaString('\'"\\')), '"\'\\"\\\\"');
       expect(format(Table([])), '{}');
       expect(
-        format(Table([
-          Field(value: Bool(true)),
-          Field(name: 'x', value: Bool(false)),
-          Field(index: Number(3), value: Nil()),
-        ])),
+        format(
+          Table([
+            Field(value: Bool(true)),
+            Field(name: 'x', value: Bool(false)),
+            Field(index: Number(3), value: Nil()),
+          ]),
+        ),
         '{true, x=false, [3]=nil}',
       );
     });
@@ -27,11 +29,12 @@ void main() {
     test('bool expressions', () {
       expect(And([Bool(true), Bool(false)]).format(), 'true and false');
       expect(
-          And([
-            Bool(true),
-            Or([Bool(false)])
-          ]).format(),
-          'true and (false)');
+        And([
+          Bool(true),
+          Or([Bool(false)]),
+        ]).format(),
+        'true and (false)',
+      );
     });
 
     test('comparison', () {
@@ -76,9 +79,13 @@ void main() {
 
     test('do', () {
       expect(
-        format(Do(Block([
-          Call('print', [VarRef('x')])
-        ]))),
+        format(
+          Do(
+            Block([
+              Call('print', [VarRef('x')]),
+            ]),
+          ),
+        ),
         'do\n'
         '  print(x)\n'
         'end',
@@ -114,14 +121,16 @@ void main() {
 
     test('if-else', () {
       expect(
-        format(If(
-          VarRef('x'),
-          Block([Call('print', [])]),
-          elseIfs: [
-            ElseIf(VarRef('y'), Block([Call('z', [])]))
-          ],
-          elseBlock: Block([Call('zz', [])]),
-        )),
+        format(
+          If(
+            VarRef('x'),
+            Block([Call('print', [])]),
+            elseIfs: [
+              ElseIf(VarRef('y'), Block([Call('z', [])])),
+            ],
+            elseBlock: Block([Call('zz', [])]),
+          ),
+        ),
         'if x then\n'
         '  print()\n'
         'elseif y then\n'
@@ -134,13 +143,15 @@ void main() {
 
     test('for', () {
       expect(
-        format(For(
-          name: 'x',
-          init: VarRef('a'),
-          stop: VarRef('b'),
-          increment: Number(2),
-          block: Block([Call('print', [])]),
-        )),
+        format(
+          For(
+            name: 'x',
+            init: VarRef('a'),
+            stop: VarRef('b'),
+            increment: Number(2),
+            block: Block([Call('print', [])]),
+          ),
+        ),
         'for x = a, b, 2 do\n'
         '  print()\n'
         'end',
@@ -149,13 +160,15 @@ void main() {
 
     test('foreach', () {
       expect(
-        format(ForEach(
-          ['i', 'v'],
-          [
-            Call('items', [Table([])])
-          ],
-          Block([Call('print', [])]),
-        )),
+        format(
+          ForEach(
+            ['i', 'v'],
+            [
+              Call('items', [Table([])]),
+            ],
+            Block([Call('print', [])]),
+          ),
+        ),
         'for i, v in items({}) do\n'
         '  print()\n'
         'end',
@@ -169,9 +182,11 @@ void main() {
             'add',
             ['a', 'b'],
             Block([
-              Return(values: [
-                Add([VarRef('a'), VarRef('b')])
-              ]),
+              Return(
+                values: [
+                  Add([VarRef('a'), VarRef('b')]),
+                ],
+              ),
             ]),
           ),
         ),
@@ -216,17 +231,23 @@ void main() {
 
     test('local assignments', () {
       expect(format(Assign.single('x', Number(1), isLocal: true)), 'local x=1');
-      expect(format(Assign.single('y', Bool(false), isLocal: true)),
-          'local y=false');
+      expect(
+        format(Assign.single('y', Bool(false), isLocal: true)),
+        'local y=false',
+      );
     });
 
     test('function calls', () {
       expect(format(Call('print', [])), 'print()');
       expect(format(Call('func', [Number(1)])), 'func(1)');
-      expect(format(Call('test', [Number(1), LuaString('hello')])),
-          'test(1, "hello")');
-      expect(format(Call('complex', [VarRef('x'), Bool(true), Nil()])),
-          'complex(x, true, nil)');
+      expect(
+        format(Call('test', [Number(1), LuaString('hello')])),
+        'test(1, "hello")',
+      );
+      expect(
+        format(Call('complex', [VarRef('x'), Bool(true), Nil()])),
+        'complex(x, true, nil)',
+      );
     });
   });
 
@@ -237,91 +258,121 @@ void main() {
 
     test('array-style tables', () {
       expect(format(Table([Field(value: Number(1))])), '{1}');
-      expect(format(Table([Field(value: Number(1)), Field(value: Number(2))])),
-          '{1, 2}');
       expect(
-          format(Table([
+        format(Table([Field(value: Number(1)), Field(value: Number(2))])),
+        '{1, 2}',
+      );
+      expect(
+        format(
+          Table([
             Field(value: Number(1)),
             Field(value: LuaString('hello')),
-            Field(value: Bool(true))
-          ])),
-          '{1, "hello", true}');
+            Field(value: Bool(true)),
+          ]),
+        ),
+        '{1, "hello", true}',
+      );
     });
 
     test('named field tables', () {
       expect(format(Table([Field(name: 'a', value: Number(1))])), '{a=1}');
       expect(
-          format(Table([
+        format(
+          Table([
             Field(name: 'name', value: LuaString('test')),
-            Field(name: 'age', value: Number(25))
-          ])),
-          '{name="test", age=25}');
+            Field(name: 'age', value: Number(25)),
+          ]),
+        ),
+        '{name="test", age=25}',
+      );
     });
 
     test('indexed field tables', () {
       expect(
-          format(Table([Field(index: Number(1), value: LuaString('first'))])),
-          '{[1]="first"}');
+        format(Table([Field(index: Number(1), value: LuaString('first'))])),
+        '{[1]="first"}',
+      );
       expect(
-          format(Table([Field(index: VarRef('key'), value: VarRef('value'))])),
-          '{[key]=value}');
+        format(Table([Field(index: VarRef('key'), value: VarRef('value'))])),
+        '{[key]=value}',
+      );
       expect(
-          format(Table([
+        format(
+          Table([
             Field(index: LuaString('key1'), value: Number(1)),
-            Field(index: LuaString('key2'), value: Number(2))
-          ])),
-          '{["key1"]=1, ["key2"]=2}');
+            Field(index: LuaString('key2'), value: Number(2)),
+          ]),
+        ),
+        '{["key1"]=1, ["key2"]=2}',
+      );
     });
 
     test('mixed table syntax', () {
       expect(
-          format(Table([
+        format(
+          Table([
             Field(value: Number(1)),
             Field(name: 'a', value: Number(2)),
-            Field(index: Number(3), value: LuaString('third'))
-          ])),
-          '{1, a=2, [3]="third"}');
+            Field(index: Number(3), value: LuaString('third')),
+          ]),
+        ),
+        '{1, a=2, [3]="third"}',
+      );
     });
 
     test('nested tables', () {
       expect(format(Table([Field(value: Table([]))])), '{{}}');
       expect(
-          format(Table([
+        format(
+          Table([
             Field(value: Table([])),
-            Field(value: Table([Field(value: Number(1))]))
-          ])),
-          '{{}, {1}}');
+            Field(value: Table([Field(value: Number(1))])),
+          ]),
+        ),
+        '{{}, {1}}',
+      );
       expect(
-          format(Table([
+        format(
+          Table([
             Field(
-                name: 'inner',
-                value: Table([Field(name: 'value', value: Number(42))]))
-          ])),
-          '{inner={value=42}}');
+              name: 'inner',
+              value: Table([Field(name: 'value', value: Number(42))]),
+            ),
+          ]),
+        ),
+        '{inner={value=42}}',
+      );
     });
 
     test('table assignments', () {
       expect(format(Assign.single('x', Table([]))), 'x={}');
       expect(
-          format(Assign.single(
-              'config',
-              Table([
-                Field(name: 'name', value: LuaString('app')),
-                Field(name: 'version', value: Number(1))
-              ]))),
-          'config={name="app", version=1}');
+        format(
+          Assign.single(
+            'config',
+            Table([
+              Field(name: 'name', value: LuaString('app')),
+              Field(name: 'version', value: Number(1)),
+            ]),
+          ),
+        ),
+        'config={name="app", version=1}',
+      );
     });
 
     test('table with variables', () {
       expect(format(Table([Field(value: VarRef('x'))])), '{x}');
       expect(format(Table([Field(name: 'a', value: VarRef('y'))])), '{a=y}');
       expect(
-          format(Table([
+        format(
+          Table([
             Field(value: VarRef('first')),
             Field(name: 'second', value: VarRef('value')),
-            Field(index: VarRef('key'), value: VarRef('val'))
-          ])),
-          '{first, second=value, [key]=val}');
+            Field(index: VarRef('key'), value: VarRef('val')),
+          ]),
+        ),
+        '{first, second=value, [key]=val}',
+      );
     });
 
     test('table indexing with brackets', () {
@@ -340,10 +391,7 @@ void main() {
         format(Index(Index(VarRef('t'), Number(1)), Number(2))),
         't[1][2]',
       );
-      expect(
-        format(FieldAccess(FieldAccess(VarRef('t'), 'a'), 'b')),
-        't.a.b',
-      );
+      expect(format(FieldAccess(FieldAccess(VarRef('t'), 'a'), 'b')), 't.a.b');
       expect(
         format(FieldAccess(Index(VarRef('t'), VarRef('key')), 'field')),
         't[key].field',
@@ -357,8 +405,9 @@ void main() {
     test('complex table expressions', () {
       expect(format(Index(Table([]), Number(1))), '{}[1]');
       expect(
-          format(FieldAccess(Table([Field(name: 'x', value: Number(1))]), 'x')),
-          '{x=1}.x');
+        format(FieldAccess(Table([Field(name: 'x', value: Number(1))]), 'x')),
+        '{x=1}.x',
+      );
     });
   });
 
@@ -374,11 +423,13 @@ void main() {
 
     test('if-else statement', () {
       expect(
-        format(If(
-          VarRef('x'),
-          Block([Call('print', [])]),
-          elseBlock: Block([Call('call', [])]),
-        )),
+        format(
+          If(
+            VarRef('x'),
+            Block([Call('print', [])]),
+            elseBlock: Block([Call('call', [])]),
+          ),
+        ),
         'if x then\n'
         '  print()\n'
         'else\n'
@@ -389,14 +440,16 @@ void main() {
 
     test('if-elseif-else statement', () {
       expect(
-        format(If(
-          VarRef('x'),
-          Block([Call('print', [])]),
-          elseIfs: [
-            ElseIf(VarRef('y'), Block([Call('call', [])]))
-          ],
-          elseBlock: Block([Call('other', [])]),
-        )),
+        format(
+          If(
+            VarRef('x'),
+            Block([Call('print', [])]),
+            elseIfs: [
+              ElseIf(VarRef('y'), Block([Call('call', [])])),
+            ],
+            elseBlock: Block([Call('other', [])]),
+          ),
+        ),
         'if x then\n'
         '  print()\n'
         'elseif y then\n'
@@ -418,14 +471,16 @@ void main() {
 
     test('for loop', () {
       expect(
-        format(For(
-          name: 'i',
-          init: Number(1),
-          stop: Number(10),
-          block: Block([
-            Call('print', [VarRef('i')])
-          ]),
-        )),
+        format(
+          For(
+            name: 'i',
+            init: Number(1),
+            stop: Number(10),
+            block: Block([
+              Call('print', [VarRef('i')]),
+            ]),
+          ),
+        ),
         'for i = 1, 10 do\n'
         '  print(i)\n'
         'end',
@@ -434,15 +489,17 @@ void main() {
 
     test('for loop with increment', () {
       expect(
-        format(For(
-          name: 'i',
-          init: Number(0),
-          stop: Number(100),
-          increment: Number(10),
-          block: Block([
-            Call('step', [VarRef('i')])
-          ]),
-        )),
+        format(
+          For(
+            name: 'i',
+            init: Number(0),
+            stop: Number(100),
+            increment: Number(10),
+            block: Block([
+              Call('step', [VarRef('i')]),
+            ]),
+          ),
+        ),
         'for i = 0, 100, 10 do\n'
         '  step(i)\n'
         'end',
@@ -451,15 +508,19 @@ void main() {
 
     test('function definition', () {
       expect(
-        format(FunctionDef(
-          'calculate',
-          ['x', 'y'],
-          Block([
-            Return(values: [
-              Add([VarRef('x'), VarRef('y')])
-            ])
-          ]),
-        )),
+        format(
+          FunctionDef(
+            'calculate',
+            ['x', 'y'],
+            Block([
+              Return(
+                values: [
+                  Add([VarRef('x'), VarRef('y')]),
+                ],
+              ),
+            ]),
+          ),
+        ),
         'function calculate(x, y)\n'
         '  return x+y\n'
         'end',
@@ -468,14 +529,16 @@ void main() {
 
     test('local function definition', () {
       expect(
-        format(FunctionDef(
-          'helper',
-          [],
-          Block([
-            Call('print', [LuaString('helper called')])
-          ]),
-          isLocal: true,
-        )),
+        format(
+          FunctionDef(
+            'helper',
+            [],
+            Block([
+              Call('print', [LuaString('helper called')]),
+            ]),
+            isLocal: true,
+          ),
+        ),
         'local function helper()\n'
         '  print("helper called")\n'
         'end',
@@ -485,10 +548,7 @@ void main() {
     test('return statements', () {
       expect(format(Return()), 'return');
       expect(format(Return(values: [Number(42)])), 'return 42');
-      expect(
-        format(Return(values: [VarRef('x'), VarRef('y')])),
-        'return x, y',
-      );
+      expect(format(Return(values: [VarRef('x'), VarRef('y')])), 'return x, y');
     });
 
     test('break statement', () {
@@ -497,28 +557,27 @@ void main() {
 
     test('nested control structures', () {
       expect(
-        format(If(
-          VarRef('condition'),
-          Block([
-            While(
-              VarRef('running'),
-              Block([
-                For(
-                  name: 'i',
-                  init: Number(1),
-                  stop: Number(5),
-                  block: Block([
-                    If(
-                      Equals(VarRef('i'), Number(3)),
-                      Block([Break()]),
-                    ),
-                    Call('process', [VarRef('i')]),
-                  ]),
-                ),
-              ]),
-            ),
-          ]),
-        )),
+        format(
+          If(
+            VarRef('condition'),
+            Block([
+              While(
+                VarRef('running'),
+                Block([
+                  For(
+                    name: 'i',
+                    init: Number(1),
+                    stop: Number(5),
+                    block: Block([
+                      If(Equals(VarRef('i'), Number(3)), Block([Break()])),
+                      Call('process', [VarRef('i')]),
+                    ]),
+                  ),
+                ]),
+              ),
+            ]),
+          ),
+        ),
         'if condition then\n'
         '  while running do \n'
         '    for i = 1, 5 do\n'

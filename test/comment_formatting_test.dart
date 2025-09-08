@@ -58,7 +58,8 @@ void main() {
         SingleLineComment(' End of program'),
       ]);
 
-      final expected = '-- Start of program\n'
+      final expected =
+          '-- Start of program\n'
           'local x=5\n'
           '--[[Variable x is now 5]]\n'
           'print(x)\n'
@@ -163,10 +164,12 @@ void main() {
     test('format nested structure with comments', () {
       final nested = Block([
         SingleLineComment(' Outer comment'),
-        Do(Block([
-          MultiLineComment('Inner block\ncomment'),
-          Assign.single('nested', Bool(true), isLocal: true),
-        ])),
+        Do(
+          Block([
+            MultiLineComment('Inner block\ncomment'),
+            Assign.single('nested', Bool(true), isLocal: true),
+          ]),
+        ),
         SingleLineComment(' After do block'),
       ]);
 

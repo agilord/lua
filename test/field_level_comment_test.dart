@@ -164,10 +164,11 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'config': TableInstance.fromMap({'x': 1, 'y': 2})
-          }));
+        result,
+        TableInstance.fromMap({
+          'config': TableInstance.fromMap({'x': 1, 'y': 2}),
+        }),
+      );
     });
 
     test('evaluate complex structure with field comments', () {
@@ -177,19 +178,23 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'users': TableInstance.fromMap({
-              1: TableInstance.fromMap({'id': 1, 'name': 'Alice'})
-            })
-          }));
+        result,
+        TableInstance.fromMap({
+          'users': TableInstance.fromMap({
+            1: TableInstance.fromMap({'id': 1, 'name': 'Alice'}),
+          }),
+        }),
+      );
     });
   });
 
   group('field-level comment formatting tests', () {
     test('format field with comment', () {
-      final field =
-          Field(name: 'test', value: Number(42), comment: 'my comment');
+      final field = Field(
+        name: 'test',
+        value: Number(42),
+        comment: 'my comment',
+      );
       final table = Table([field]);
       final formatted = format(table);
 
@@ -229,9 +234,10 @@ void main() {
 
     test('format indexed field with comment', () {
       final field = Field(
-          index: Number(5),
-          value: LuaString('test'),
-          comment: 'indexed comment');
+        index: Number(5),
+        value: LuaString('test'),
+        comment: 'indexed comment',
+      );
       final table = Table([field]);
       final formatted = format(table);
 

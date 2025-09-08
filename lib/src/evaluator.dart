@@ -5,9 +5,7 @@ import 'package:collection/collection.dart';
 import 'package:lua/src/ast.dart';
 
 extension EvaluateExt on Ast {
-  Object? evaluate({
-    LuaEnv? env,
-  }) {
+  Object? evaluate({LuaEnv? env}) {
     final root = _Context.fromEnv(env ?? LuaEnv());
     return visit(root);
   }
@@ -64,11 +62,8 @@ class LuaEnv {
   final Map<String, LuaFunction>? builtins;
   final LuaOutputWriter output;
 
-  LuaEnv({
-    this.variables,
-    this.builtins,
-    LuaOutputWriter? output,
-  }) : output = output ?? LuaOutputBuffer();
+  LuaEnv({this.variables, this.builtins, LuaOutputWriter? output})
+    : output = output ?? LuaOutputBuffer();
 
   /// Create a LuaEnv with standard library functions
   factory LuaEnv.withStdlib({
@@ -121,16 +116,15 @@ class _Context extends Visitor<Object?> {
   final LuaOutputWriter output;
 
   _Context.fromEnv(LuaEnv env)
-      : parent = null,
-        builtins = env.builtins ?? {},
-        output = env.output {
+    : parent = null,
+      builtins = env.builtins ?? {},
+      output = env.output {
     vars.addAll(env.variables ?? const {});
   }
 
-  _Context({
-    required this.parent,
-  })  : builtins = parent?.builtins ?? {},
-        output = parent?.output ?? LuaOutputBuffer();
+  _Context({required this.parent})
+    : builtins = parent?.builtins ?? {},
+      output = parent?.output ?? LuaOutputBuffer();
 
   _Context _fork() {
     return _Context(parent: this);
@@ -230,7 +224,8 @@ class _Context extends Visitor<Object?> {
         return table.getProperty(key);
       }
       throw EvaluationException(
-          'External object index must be a string, got: $key');
+        'External object index must be a string, got: $key',
+      );
     }
     throw EvaluationException('Cannot index non-table value: $table');
   }
@@ -284,7 +279,8 @@ class _Context extends Visitor<Object?> {
       return variadicArgs;
     }
     throw EvaluationException(
-        'Variadic arguments (...) can only be used inside variadic functions');
+      'Variadic arguments (...) can only be used inside variadic functions',
+    );
   }
 
   @override
@@ -305,29 +301,33 @@ class _Context extends Visitor<Object?> {
 
   @override
   Object? visitLess(Less value) {
-    return (value.left.visit(this) as Comparable)
-            .compareTo(value.right.visit(this)) <
+    return (value.left.visit(this) as Comparable).compareTo(
+          value.right.visit(this),
+        ) <
         0;
   }
 
   @override
   Object? visitLessEq(LessEq value) {
-    return (value.left.visit(this) as Comparable)
-            .compareTo(value.right.visit(this)) <=
+    return (value.left.visit(this) as Comparable).compareTo(
+          value.right.visit(this),
+        ) <=
         0;
   }
 
   @override
   Object? visitGreater(Greater value) {
-    return (value.left.visit(this) as Comparable)
-            .compareTo(value.right.visit(this)) >
+    return (value.left.visit(this) as Comparable).compareTo(
+          value.right.visit(this),
+        ) >
         0;
   }
 
   @override
   Object? visitGreaterEq(GreaterEq value) {
-    return (value.left.visit(this) as Comparable)
-            .compareTo(value.right.visit(this)) >=
+    return (value.left.visit(this) as Comparable).compareTo(
+          value.right.visit(this),
+        ) >=
         0;
   }
 
@@ -380,7 +380,8 @@ class _Context extends Visitor<Object?> {
     final maxIndex = value.values.length - 1;
     final values = value.names
         .mapIndexed(
-            (i, _) => i <= maxIndex ? value.values[i].visit(this) : null)
+          (i, _) => i <= maxIndex ? value.values[i].visit(this) : null,
+        )
         .toList();
     for (int i = 0; i < value.names.length; i++) {
       final v = values[i];
@@ -576,7 +577,8 @@ class _Context extends Visitor<Object?> {
   Object? visitForEach(ForEach value) {
     if (value.values.length != 1) {
       throw EvaluationException(
-          'For-in loops currently support only single iterator expression');
+        'For-in loops currently support only single iterator expression',
+      );
     }
 
     final iterator = value.values.first.visit(this);
@@ -639,7 +641,8 @@ class _Context extends Visitor<Object?> {
       }
     } else {
       throw EvaluationException(
-          'For-in loop requires an iterator (use pairs() or ipairs())');
+        'For-in loop requires an iterator (use pairs() or ipairs())',
+      );
     }
 
     return null;
@@ -647,8 +650,12 @@ class _Context extends Visitor<Object?> {
 
   @override
   Object? visitFunctionDef(FunctionDef value) {
-    final function = _LuaFunction(value.args, value.body, this,
-        hasVariadicArgs: value.hasVariadicArgs);
+    final function = _LuaFunction(
+      value.args,
+      value.body,
+      this,
+      hasVariadicArgs: value.hasVariadicArgs,
+    );
     if (value.isLocal) {
       vars[value.name] = function;
     } else {
@@ -784,8 +791,12 @@ class _LuaFunction {
   final _Context closure;
   final bool hasVariadicArgs;
 
-  _LuaFunction(this.parameters, this.body, this.closure,
-      {this.hasVariadicArgs = false});
+  _LuaFunction(
+    this.parameters,
+    this.body,
+    this.closure, {
+    this.hasVariadicArgs = false,
+  });
 
   Object? call(List<Object?> args) {
     final functionContext = _Context(parent: closure);
@@ -866,7 +877,8 @@ class LuaDartObject extends LuaExternalObject {
       setters[name]!(value);
     } else {
       throw EvaluationException(
-          'Property $name is not settable on $dartObject');
+        'Property $name is not settable on $dartObject',
+      );
     }
   }
 }
@@ -1205,7 +1217,8 @@ TableInstance _createStringLibrary() {
           result.writeCharCode(arg);
         } else {
           throw EvaluationException(
-              'string.char requires valid character codes');
+            'string.char requires valid character codes',
+          );
         }
       }
       return result.toString();

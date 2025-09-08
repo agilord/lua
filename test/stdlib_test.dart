@@ -220,7 +220,9 @@ void main() {
         final env = LuaEnv.withStdlib();
 
         expect(
-            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+          () => ast.evaluate(env: env),
+          throwsA(isA<EvaluationException>()),
+        );
       });
 
       test('math.abs with non-number throws error', () {
@@ -230,7 +232,9 @@ void main() {
         final env = LuaEnv.withStdlib();
 
         expect(
-            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+          () => ast.evaluate(env: env),
+          throwsA(isA<EvaluationException>()),
+        );
       });
 
       test('string.len with non-string throws error', () {
@@ -240,7 +244,9 @@ void main() {
         final env = LuaEnv.withStdlib();
 
         expect(
-            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+          () => ast.evaluate(env: env),
+          throwsA(isA<EvaluationException>()),
+        );
       });
     });
 

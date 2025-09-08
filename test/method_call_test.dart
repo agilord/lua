@@ -305,7 +305,7 @@ void main() {
 class TestHub extends LuaExternalObject {
   final Map<String, dynamic> _properties = {
     'name': 'TestHub',
-    'version': '1.0'
+    'version': '1.0',
   };
 
   @override

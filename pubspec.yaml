@@ -1,5 +1,5 @@
 name: lua
-description: Lua language utilities in Dart.
+description: Lua code parser, evaluator and formatter in Dart.
 version: 0.2.0
 repository: https://github.com/agilord/lua
 
@@ -7,12 +7,12 @@ topics:
   - lua
 
 environment:
-  sdk: ^3.1.0
+  sdk: ^3.9.0
 
 dependencies:
   collection: ^1.18.0
-  petitparser: ^6.0.1
+  petitparser: ^7.0.0
 
 dev_dependencies:
-  lints: ^3.0.0
+  lints: ^6.0.0
   test: ^1.21.0

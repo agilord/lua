@@ -146,7 +146,9 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result, TableInstance.fromMap({'inner': TableInstance.fromMap({})}));
+        result,
+        TableInstance.fromMap({'inner': TableInstance.fromMap({})}),
+      );
     });
 
     test('evaluate nested table with values', () {
@@ -155,10 +157,11 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'config': TableInstance.fromMap({'x': 10, 'y': 20})
-          }));
+        result,
+        TableInstance.fromMap({
+          'config': TableInstance.fromMap({'x': 10, 'y': 20}),
+        }),
+      );
     });
 
     test('evaluate multiple nested tables', () {
@@ -168,11 +171,12 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'math': TableInstance.fromMap({'pi': 3.14}),
-            'physics': TableInstance.fromMap({'c': 299792458})
-          }));
+        result,
+        TableInstance.fromMap({
+          'math': TableInstance.fromMap({'pi': 3.14}),
+          'physics': TableInstance.fromMap({'c': 299792458}),
+        }),
+      );
     });
 
     test('evaluate deeply nested tables', () {
@@ -182,14 +186,15 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'app': TableInstance.fromMap({
-              'config': TableInstance.fromMap({
-                'database': TableInstance.fromMap({'host': 'localhost'})
-              })
-            })
-          }));
+        result,
+        TableInstance.fromMap({
+          'app': TableInstance.fromMap({
+            'config': TableInstance.fromMap({
+              'database': TableInstance.fromMap({'host': 'localhost'}),
+            }),
+          }),
+        }),
+      );
     });
 
     test('evaluate mixed field types with nested tables', () {
@@ -198,13 +203,14 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            1: 100,
-            2: 200,
-            'settings': TableInstance.fromMap({'debug': true}),
-            4: 300
-          }));
+        result,
+        TableInstance.fromMap({
+          1: 100,
+          2: 200,
+          'settings': TableInstance.fromMap({'debug': true}),
+          4: 300,
+        }),
+      );
     });
 
     test('evaluate nested array tables', () {
@@ -214,11 +220,12 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'numbers': TableInstance.fromMap({1: 1, 2: 2, 3: 3}),
-            'letters': TableInstance.fromMap({1: 'a', 2: 'b', 3: 'c'})
-          }));
+        result,
+        TableInstance.fromMap({
+          'numbers': TableInstance.fromMap({1: 1, 2: 2, 3: 3}),
+          'letters': TableInstance.fromMap({1: 'a', 2: 'b', 3: 'c'}),
+        }),
+      );
     });
   });
 
@@ -264,10 +271,11 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'server': TableInstance.fromMap({'port': 8080, 'ssl': false})
-          }));
+        result,
+        TableInstance.fromMap({
+          'server': TableInstance.fromMap({'port': 8080, 'ssl': false}),
+        }),
+      );
     });
 
     test('parse complex nested structure with comment', () {

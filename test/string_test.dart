@@ -26,8 +26,10 @@ void main() {
       expect(parseExpr('[[hello]]'), LuaString('hello'));
       expect(parseExpr('[[]]'), LuaString(''));
       expect(parseExpr('[[hello world]]'), LuaString('hello world'));
-      expect(parseExpr('[[multi\nline\nstring]]'),
-          LuaString('multi\nline\nstring'));
+      expect(
+        parseExpr('[[multi\nline\nstring]]'),
+        LuaString('multi\nline\nstring'),
+      );
     });
 
     test('escape sequences', () {
@@ -65,17 +67,23 @@ void main() {
 
     test('long strings preserve content literally', () {
       expect(parseExpr(r'[[No \n escape]]'), LuaString(r'No \n escape'));
-      expect(parseExpr('[[Quotes "and" quotes]]'),
-          LuaString('Quotes "and" quotes'));
-      expect(parseExpr('[[Line 1\nLine 2\nLine 3]]'),
-          LuaString('Line 1\nLine 2\nLine 3'));
+      expect(
+        parseExpr('[[Quotes "and" quotes]]'),
+        LuaString('Quotes "and" quotes'),
+      );
+      expect(
+        parseExpr('[[Line 1\nLine 2\nLine 3]]'),
+        LuaString('Line 1\nLine 2\nLine 3'),
+      );
     });
 
     test('complex string examples', () {
       expect(parseExpr(r'"\x48\x65\x6C\x6C\x6F"'), LuaString('Hello'));
       expect(parseExpr(r'"\072\101\108\108\111"'), LuaString('Hello'));
-      expect(parseExpr(r'"Line 1\nLine 2\tIndented"'),
-          LuaString('Line 1\nLine 2\tIndented'));
+      expect(
+        parseExpr(r'"Line 1\nLine 2\tIndented"'),
+        LuaString('Line 1\nLine 2\tIndented'),
+      );
     });
   });
 
@@ -127,18 +135,24 @@ void main() {
 
       expect(Call('type', [LuaString('hello')]).evaluate(env: env), 'string');
       expect(Call('type', [LuaString('')]).evaluate(env: env), 'string');
-      expect(Call('type', [LuaString('with\nescapes')]).evaluate(env: env),
-          'string');
+      expect(
+        Call('type', [LuaString('with\nescapes')]).evaluate(env: env),
+        'string',
+      );
     });
 
     test('tostring function with strings', () {
       final env = LuaEnv.withStdlib();
 
       expect(
-          Call('tostring', [LuaString('hello')]).evaluate(env: env), 'hello');
+        Call('tostring', [LuaString('hello')]).evaluate(env: env),
+        'hello',
+      );
       expect(Call('tostring', [LuaString('')]).evaluate(env: env), '');
-      expect(Call('tostring', [LuaString('test\nstring')]).evaluate(env: env),
-          'test\nstring');
+      expect(
+        Call('tostring', [LuaString('test\nstring')]).evaluate(env: env),
+        'test\nstring',
+      );
     });
   });
 
@@ -146,23 +160,29 @@ void main() {
     test('concatenate different string types', () {
       final env = LuaEnv();
 
-      final result1 = Concatenate([LuaString('Hello'), LuaString(' World')])
-          .evaluate(env: env);
+      final result1 = Concatenate([
+        LuaString('Hello'),
+        LuaString(' World'),
+      ]).evaluate(env: env);
       expect(result1, 'Hello World');
 
-      final result2 = Concatenate([LuaString('Line 1\n'), LuaString('Line 2')])
-          .evaluate(env: env);
+      final result2 = Concatenate([
+        LuaString('Line 1\n'),
+        LuaString('Line 2'),
+      ]).evaluate(env: env);
       expect(result2, 'Line 1\nLine 2');
     });
   });
 
   group('string assignment and variables', () {
     test('string variables work correctly', () {
-      final env = LuaEnv(variables: {
-        'x': 'hello',
-        'y': 'line1\nline2',
-        'z': 'multiline\nstring'
-      });
+      final env = LuaEnv(
+        variables: {
+          'x': 'hello',
+          'y': 'line1\nline2',
+          'z': 'multiline\nstring',
+        },
+      );
 
       expect(VarRef('x').evaluate(env: env), 'hello');
       expect(VarRef('y').evaluate(env: env), 'line1\nline2');

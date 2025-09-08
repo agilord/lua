@@ -47,7 +47,9 @@ void main() {
 
       expect(table.fields.length, 2);
       expect(
-          table.fields[0].comment, 'configuration section\nenable debugging');
+        table.fields[0].comment,
+        'configuration section\nenable debugging',
+      );
       expect(table.fields[1].comment, 'server port');
     });
 
@@ -77,8 +79,10 @@ void main() {
       final table = returnStmt.values?.first as Table;
 
       expect(table.fields.length, 3);
-      expect(table.fields[0].comment,
-          'first leading comment\nsecond leading comment');
+      expect(
+        table.fields[0].comment,
+        'first leading comment\nsecond leading comment',
+      );
       expect(table.fields[0].name, 'a');
       expect(table.fields[1].name, 'b');
       expect(table.fields[2].name, 'c');
@@ -111,7 +115,10 @@ void main() {
     test('format table with full line comments', () {
       final fields = [
         Field(
-            name: 'test', value: Number(42), comment: 'configuration comment'),
+          name: 'test',
+          value: Number(42),
+          comment: 'configuration comment',
+        ),
       ];
       final table = Table(fields);
       final formatted = format(table);
@@ -122,9 +129,10 @@ void main() {
     test('format table with multiple full line comments', () {
       final fields = [
         Field(
-            name: 'a',
-            value: Number(1),
-            comment: 'first comment\nsecond comment'),
+          name: 'a',
+          value: Number(1),
+          comment: 'first comment\nsecond comment',
+        ),
         Field(name: 'b', value: Number(2)),
       ];
       final table = Table(fields);

@@ -110,12 +110,13 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            1: 'first', // positional field
-            'second': 'value', // named field
-            100: 'indexed' // indexed field
-          }));
+        result,
+        TableInstance.fromMap({
+          1: 'first', // positional field
+          'second': 'value', // named field
+          100: 'indexed', // indexed field
+        }),
+      );
     });
   });
 
@@ -171,27 +172,28 @@ void main() {
     });
 
     test(
-        'parse complex multi-line table with nested table and trailing comment',
-        () {
-      final code =
-          'return {\n  name = "config",\n  values = { 1, 2, 3 },\n  enabled = true\n}--settings';
-      final ast = parse(code);
+      'parse complex multi-line table with nested table and trailing comment',
+      () {
+        final code =
+            'return {\n  name = "config",\n  values = { 1, 2, 3 },\n  enabled = true\n}--settings';
+        final ast = parse(code);
 
-      expect(ast.statements.length, 2);
-      expect(ast.statements[0], isA<Return>());
-      expect(ast.statements[1], isA<SingleLineComment>());
+        expect(ast.statements.length, 2);
+        expect(ast.statements[0], isA<Return>());
+        expect(ast.statements[1], isA<SingleLineComment>());
 
-      final returnStmt = ast.statements[0] as Return;
-      final table = returnStmt.values?.first as Table;
-      expect(table.fields.length, 3);
-      expect(table.fields[0].name, 'name');
-      expect(table.fields[1].name, 'values');
-      expect(table.fields[1].value, isA<Table>()); // Nested table
-      expect(table.fields[2].name, 'enabled');
+        final returnStmt = ast.statements[0] as Return;
+        final table = returnStmt.values?.first as Table;
+        expect(table.fields.length, 3);
+        expect(table.fields[0].name, 'name');
+        expect(table.fields[1].name, 'values');
+        expect(table.fields[1].value, isA<Table>()); // Nested table
+        expect(table.fields[2].name, 'enabled');
 
-      final comment = ast.statements[1] as SingleLineComment;
-      expect(comment.text, 'settings');
-    });
+        final comment = ast.statements[1] as SingleLineComment;
+        expect(comment.text, 'settings');
+      },
+    );
 
     test('evaluate complex multi-line table with nested table and comment', () {
       final code =
@@ -200,12 +202,13 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'title': 'test',
-            'items': TableInstance.fromMap({1: 'a', 2: 'b', 3: 'c'}),
-            'active': true,
-          }));
+        result,
+        TableInstance.fromMap({
+          'title': 'test',
+          'items': TableInstance.fromMap({1: 'a', 2: 'b', 3: 'c'}),
+          'active': true,
+        }),
+      );
     });
   });
 
@@ -233,8 +236,10 @@ void main() {
       final ast = parse(code);
       final result = ast.evaluate();
 
-      expect(result,
-          TableInstance.fromMap({'id': 1, 'name': 'config', 'active': true}));
+      expect(
+        result,
+        TableInstance.fromMap({'id': 1, 'name': 'config', 'active': true}),
+      );
     });
 
     test('parse table with numeric values and trailing comment', () {
@@ -263,8 +268,10 @@ void main() {
       final ast = parse(code);
       final result = ast.evaluate();
 
-      expect(result,
-          TableInstance.fromMap({'width': 1920, 'height': 1080, 'depth': 32}));
+      expect(
+        result,
+        TableInstance.fromMap({'width': 1920, 'height': 1080, 'depth': 32}),
+      );
     });
 
     test('parse table with mixed numeric field types and trailing comment', () {
@@ -290,8 +297,10 @@ void main() {
       final ast = parse(code);
       final result = ast.evaluate();
 
-      expect(result,
-          TableInstance.fromMap({1: 100, 2: 200, 'total': 500, 5: 750}));
+      expect(
+        result,
+        TableInstance.fromMap({1: 100, 2: 200, 'total': 500, 5: 750}),
+      );
     });
 
     // Documents current implementation capabilities and limitations

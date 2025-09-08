@@ -9,7 +9,7 @@ void main() {
         Assign.single('a', Number(1), isLocal: true),
         Repeat(
           Block([
-            Assign.single('a', Add([VarRef('a'), Number(1)]))
+            Assign.single('a', Add([VarRef('a'), Number(1)])),
           ]),
           GreaterEq(VarRef('a'), Number(5)),
         ),
@@ -62,8 +62,10 @@ void main() {
         ),
         VarRef('x'),
       ]);
-      expect(block.evaluate(),
-          32); // x starts at 2, becomes 4, 8, 16, 32 when both conditions are true
+      expect(
+        block.evaluate(),
+        32,
+      ); // x starts at 2, becomes 4, 8, 16, 32 when both conditions are true
     });
 
     test('repeat-until with variable reference in condition', () {
@@ -72,7 +74,7 @@ void main() {
         Assign.single('counter', Number(0), isLocal: true),
         Repeat(
           Block([
-            Assign.single('counter', Add([VarRef('counter'), Number(1)]))
+            Assign.single('counter', Add([VarRef('counter'), Number(1)])),
           ]),
           GreaterEq(VarRef('counter'), VarRef('limit')),
         ),
@@ -86,10 +88,7 @@ void main() {
         Assign.single('i', Number(1), isLocal: true),
         Repeat(
           Block([
-            If(
-              Greater(VarRef('i'), Number(3)),
-              Block([Break()]),
-            ),
+            If(Greater(VarRef('i'), Number(3)), Block([Break()])),
             Assign.single('i', Add([VarRef('i'), Number(1)])),
           ]),
           Bool(false), // Would loop forever without break
@@ -129,7 +128,9 @@ void main() {
         Repeat(
           Block([
             Assign.single(
-                'result', Concatenate([VarRef('result'), LuaString('x')])),
+              'result',
+              Concatenate([VarRef('result'), LuaString('x')]),
+            ),
             Assign.single('count', Add([VarRef('count'), Number(1)])),
           ]),
           Equals(VarRef('result'), LuaString('xxx')),
@@ -148,7 +149,8 @@ void main() {
             Assign.single('counter', Add([VarRef('counter'), Number(1)])),
           ]),
           VarRef(
-              'counter'), // Numbers are truthy in Lua, so this stops on first iteration
+            'counter',
+          ), // Numbers are truthy in Lua, so this stops on first iteration
         ),
         VarRef('counter'),
       ]);
@@ -180,8 +182,10 @@ void main() {
               Block([Break()]), // Use break instead of return
             ),
           ]),
-          Greater(VarRef('value'),
-              Number(15)), // Loop until value > 15, but break at 13
+          Greater(
+            VarRef('value'),
+            Number(15),
+          ), // Loop until value > 15, but break at 13
         ),
         VarRef('value'),
       ]);
@@ -210,9 +214,11 @@ void main() {
           'increment',
           ['x'],
           Block([
-            Return(values: [
-              Add([VarRef('x'), Number(1)])
-            ])
+            Return(
+              values: [
+                Add([VarRef('x'), Number(1)]),
+              ],
+            ),
           ]),
           isLocal: true,
         ),
@@ -237,10 +243,7 @@ void main() {
             Assign.single('a', Add([VarRef('a'), Number(1)])),
             Assign.single('b', Subtract(VarRef('b'), Number(2))),
           ]),
-          Or([
-            Greater(VarRef('a'), Number(3)),
-            Less(VarRef('b'), Number(5)),
-          ]),
+          Or([Greater(VarRef('a'), Number(3)), Less(VarRef('b'), Number(5))]),
         ),
         Add([VarRef('a'), VarRef('b')]), // Return sum
       ]);
@@ -253,9 +256,7 @@ void main() {
       final block = Block([
         Assign.single('executed', Number(0), isLocal: true),
         Repeat(
-          Block([
-            Assign.single('executed', Number(1)),
-          ]),
+          Block([Assign.single('executed', Number(1))]),
           Bool(true), // Always true
         ),
         VarRef('executed'),
@@ -269,21 +270,24 @@ void main() {
         Assign.single('counter', Number(0), isLocal: true),
         Repeat(
           Block([
-            Assign.single('x', Multiply([VarRef('x'), Number(2)]),
-                isLocal: true), // Local x shadows outer x
             Assign.single(
-                'counter',
-                Add([
-                  VarRef('counter'),
-                  Number(1)
-                ])), // Increment counter for termination
+              'x',
+              Multiply([VarRef('x'), Number(2)]),
+              isLocal: true,
+            ), // Local x shadows outer x
+            Assign.single(
+              'counter',
+              Add([VarRef('counter'), Number(1)]),
+            ), // Increment counter for termination
           ]),
           Greater(VarRef('counter'), Number(3)), // Stop after 3 iterations
         ),
         VarRef('x'), // Should return outer x, which remains 1
       ]);
       expect(
-          block.evaluate(), 1); // Outer x remains unchanged, inner x is local
+        block.evaluate(),
+        1,
+      ); // Outer x remains unchanged, inner x is local
     });
 
     test('repeat-until with expression as condition', () {

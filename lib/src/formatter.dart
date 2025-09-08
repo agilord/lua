@@ -21,10 +21,7 @@ class _Code {
   _Code.line(String value) : lines = [value];
 
   _Code prefixFirst(String v) {
-    return _Code.withLines([
-      '$v${lines.first}',
-      ...lines.skip(1),
-    ]);
+    return _Code.withLines(['$v${lines.first}', ...lines.skip(1)]);
   }
 
   _Code postfixLast(String v) {
@@ -47,7 +44,11 @@ class _Code {
   }
 
   factory _Code.compose(
-      String prefix, Iterable<_Code> items, String join, String postfix) {
+    String prefix,
+    Iterable<_Code> items,
+    String join,
+    String postfix,
+  ) {
     var v = _Code.line(prefix);
     var first = true;
     for (final item in items) {
@@ -78,7 +79,8 @@ class _LuaFormatter extends Visitor<_Code> {
   @override
   _Code visitBlock(Block value) {
     return _Code.withLines(
-        value.statements.expand((s) => s.visit(this).lines).toList());
+      value.statements.expand((s) => s.visit(this).lines).toList(),
+    );
   }
 
   @override
@@ -90,7 +92,11 @@ class _LuaFormatter extends Visitor<_Code> {
     final code = value.values == null || value.values!.isEmpty
         ? _Code.line('return')
         : _Code.compose(
-            'return ', value.values!.map((e) => e.visit(this)), ', ', '');
+            'return ',
+            value.values!.map((e) => e.visit(this)),
+            ', ',
+            '',
+          );
     return _addComment(code, value.comment);
   }
 
@@ -98,29 +104,38 @@ class _LuaFormatter extends Visitor<_Code> {
   _Code visitAssign(Assign value) {
     final namesJoined = value.names.join(', ');
     final code = _Code.compose(
-        value.isLocal ? 'local $namesJoined=' : '$namesJoined=',
-        value.values.map((e) => e.visit(this)),
-        ', ',
-        '');
+      value.isLocal ? 'local $namesJoined=' : '$namesJoined=',
+      value.values.map((e) => e.visit(this)),
+      ', ',
+      '',
+    );
     return _addComment(code, value.comment);
   }
 
   @override
   _Code visitCall(Call value) {
     final code = _Code.compose(
-        '${value.name}(', value.args.map((e) => e.visit(this)), ', ', ')');
+      '${value.name}(',
+      value.args.map((e) => e.visit(this)),
+      ', ',
+      ')',
+    );
     return _addComment(code, value.comment);
   }
 
   @override
   _Code visitCallExpression(CallExpression value) =>
       _Code.compose('(', [value.function.visit(this)], '', ')').joinInline(
-          _Code.compose('(', value.args.map((e) => e.visit(this)), ', ', ')'));
+        _Code.compose('(', value.args.map((e) => e.visit(this)), ', ', ')'),
+      );
 
   @override
   _Code visitCallFieldAccess(CallFieldAccess value) {
-    final code = value.fieldAccess.visit(this).joinInline(
-        _Code.compose('(', value.args.map((e) => e.visit(this)), ', ', ')'));
+    final code = value.fieldAccess
+        .visit(this)
+        .joinInline(
+          _Code.compose('(', value.args.map((e) => e.visit(this)), ', ', ')'),
+        );
     return _addComment(code, value.comment);
   }
 
@@ -142,7 +157,8 @@ class _LuaFormatter extends Visitor<_Code> {
     return _Code.line('repeat')
         .joinDistinct(value.block.visit(this).indent())
         .joinDistinct(
-            _Code.line('until ').joinInline(value.condition.visit(this)));
+          _Code.line('until ').joinInline(value.condition.visit(this)),
+        );
   }
 
   @override
@@ -153,15 +169,18 @@ class _LuaFormatter extends Visitor<_Code> {
         .joinDistinct(value.block.visit(this).indent());
     if (value.elseIfs != null) {
       for (final e in value.elseIfs!) {
-        v = v.joinDistinct(_Code.line('elseif ')
-            .joinInline(e.condition.visit(this))
-            .postfixLast(' then')
-            .joinDistinct(e.block.visit(this).indent()));
+        v = v.joinDistinct(
+          _Code.line('elseif ')
+              .joinInline(e.condition.visit(this))
+              .postfixLast(' then')
+              .joinDistinct(e.block.visit(this).indent()),
+        );
       }
     }
     if (value.elseBlock != null) {
-      v = v.joinDistinct(_Code.line('else')
-          .joinDistinct(value.elseBlock!.visit(this).indent()));
+      v = v.joinDistinct(
+        _Code.line('else').joinDistinct(value.elseBlock!.visit(this).indent()),
+      );
     }
     return v.joinDistinct(_Code.line('end'));
   }
@@ -184,8 +203,12 @@ class _LuaFormatter extends Visitor<_Code> {
 
   @override
   _Code visitForEach(ForEach value) {
-    return _Code.compose('for ${value.names.join(', ')} in ',
-            value.values.map((e) => e.visit(this)), ', ', ' do')
+    return _Code.compose(
+          'for ${value.names.join(', ')} in ',
+          value.values.map((e) => e.visit(this)),
+          ', ',
+          ' do',
+        )
         .joinDistinct(value.block.visit(this).indent())
         .joinDistinct(_Code.line('end'));
   }
@@ -219,7 +242,8 @@ class _LuaFormatter extends Visitor<_Code> {
 
   @override
   _Code visitString(LuaString value) => _Code.line(
-      '"${value.value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"');
+    '"${value.value.replaceAll(r'\', r'\\').replaceAll('"', r'\"')}"',
+  );
 
   @override
   _Code visitNot(Not value) => value.value.visit(this).prefixFirst('not ');
@@ -231,23 +255,29 @@ class _LuaFormatter extends Visitor<_Code> {
   @override
   _Code visitAnd(And value) {
     return _Code.compose(
-        '',
-        value.items.map((e) => e is Literal
+      '',
+      value.items.map(
+        (e) => e is Literal
             ? e.visit(this)
-            : e.visit(this).prefixFirst('(').postfixLast(')')),
-        ' and ',
-        '');
+            : e.visit(this).prefixFirst('(').postfixLast(')'),
+      ),
+      ' and ',
+      '',
+    );
   }
 
   @override
   _Code visitOr(Or value) {
     return _Code.compose(
-        '',
-        value.items.map((e) => e is Literal
+      '',
+      value.items.map(
+        (e) => e is Literal
             ? e.visit(this)
-            : e.visit(this).prefixFirst('(').postfixLast(')')),
-        ' or ',
-        '');
+            : e.visit(this).prefixFirst('(').postfixLast(')'),
+      ),
+      ' or ',
+      '',
+    );
   }
 
   @override

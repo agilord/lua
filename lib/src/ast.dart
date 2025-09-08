@@ -191,25 +191,14 @@ class Assign extends Statement {
   final List<String> names;
   final List<Expression> values;
 
-  Assign(
-    this.names,
-    this.values, {
-    this.isLocal = false,
-    super.comment,
-  });
+  Assign(this.names, this.values, {this.isLocal = false, super.comment});
 
   factory Assign.single(
     String name,
     Expression value, {
     bool isLocal = false,
     String? comment,
-  }) =>
-      Assign(
-        [name],
-        [value],
-        isLocal: isLocal,
-        comment: comment,
-      );
+  }) => Assign([name], [value], isLocal: isLocal, comment: comment);
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitAssign(this);
@@ -335,13 +324,7 @@ class If extends Statement {
   final List<ElseIf>? elseIfs;
   final Block? elseBlock;
 
-  If(
-    this.condition,
-    this.block, {
-    this.elseIfs,
-    this.elseBlock,
-    super.comment,
-  });
+  If(this.condition, this.block, {this.elseIfs, this.elseBlock, super.comment});
 
   @override
   T visit<T>(Visitor<T> visitor) => visitor.visitIf(this);
@@ -514,10 +497,9 @@ class InlineFunction extends Expression {
   bool operator ==(Object other) {
     return other is InlineFunction &&
         other.args.length == args.length &&
-        other.args
-            .asMap()
-            .entries
-            .every((entry) => entry.value == args[entry.key]) &&
+        other.args.asMap().entries.every(
+          (entry) => entry.value == args[entry.key],
+        ) &&
         other.body == body;
   }
 }
@@ -608,12 +590,7 @@ class Field {
   final Expression value;
   final String? comment;
 
-  Field({
-    this.name,
-    this.index,
-    required this.value,
-    this.comment,
-  }) {
+  Field({this.name, this.index, required this.value, this.comment}) {
     if (name != null && index != null) {
       throw ArgumentError('Only one of `name` or `index` must be set.');
     }

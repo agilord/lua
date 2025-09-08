@@ -1,4 +1,4 @@
-Lua language utilities in Dart.
+Lua language utilities (parser, evaluator, formatter) in Dart.
 
 ## Features
 

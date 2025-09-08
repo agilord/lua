@@ -73,28 +73,31 @@ void main() {
 
     test('return from block', () {
       expect(
-          Block([
-            Return(values: [1.lua(), 2.lua()]),
-          ]).evaluate(),
-          [1, 2]);
+        Block([
+          Return(values: [1.lua(), 2.lua()]),
+        ]).evaluate(),
+        [1, 2],
+      );
     });
 
     test('while', () {
       expect(
-          While(
-            VarRef<int>('a').lessThan(5.lua()),
-            Block([Assign.single('a', VarRef<int>('a').plus(1.lua()))]),
-          ).evaluate(env: LuaEnv(variables: {'a': 1})),
-          5);
+        While(
+          VarRef<int>('a').lessThan(5.lua()),
+          Block([Assign.single('a', VarRef<int>('a').plus(1.lua()))]),
+        ).evaluate(env: LuaEnv(variables: {'a': 1})),
+        5,
+      );
     });
 
     test('repeat', () {
       expect(
-          Repeat(
-            Block([Assign.single('a', VarRef<int>('a').plus(1.lua()))]),
-            VarRef<int>('a').greaterThanOrEquals(5.lua()),
-          ).evaluate(env: LuaEnv(variables: {'a': 1})),
-          5);
+        Repeat(
+          Block([Assign.single('a', VarRef<int>('a').plus(1.lua()))]),
+          VarRef<int>('a').greaterThanOrEquals(5.lua()),
+        ).evaluate(env: LuaEnv(variables: {'a': 1})),
+        5,
+      );
     });
   });
 
@@ -131,14 +134,20 @@ void main() {
     });
 
     test('multiple variable assignment', () {
-      final result =
-          Assign(['a', 'b'], [Number(1), Number(2)], isLocal: true).evaluate();
+      final result = Assign(
+        ['a', 'b'],
+        [Number(1), Number(2)],
+        isLocal: true,
+      ).evaluate();
       expect(result, [1, 2]);
     });
 
     test('assignment with fewer values than names', () {
-      final result =
-          Assign(['a', 'b', 'c'], [Number(1)], isLocal: true).evaluate();
+      final result = Assign(
+        ['a', 'b', 'c'],
+        [Number(1)],
+        isLocal: true,
+      ).evaluate();
       expect(result, [1, null, null]);
     });
 
@@ -176,15 +185,15 @@ void main() {
       final env = LuaEnv(variables: {'global': 'initial'});
 
       // Assign to non-existent variable (should create global)
-      expect(
-        Assign.single('nonexistent', Number(42)).evaluate(env: env),
-        42,
-      );
+      expect(Assign.single('nonexistent', Number(42)).evaluate(env: env), 42);
 
       // Local assignment should work
       expect(
-        Assign.single('local_var', Number(42), isLocal: true)
-            .evaluate(env: env),
+        Assign.single(
+          'local_var',
+          Number(42),
+          isLocal: true,
+        ).evaluate(env: env),
         42,
       );
     });
@@ -196,101 +205,127 @@ void main() {
     });
 
     test('array-style tables', () {
-      expect(Table([Field(value: Number(1))]).evaluate(),
-          TableInstance.fromMap({1: 1}));
       expect(
-          Table([Field(value: Number(1)), Field(value: Number(2))]).evaluate(),
-          TableInstance.fromMap({1: 1, 2: 2}));
+        Table([Field(value: Number(1))]).evaluate(),
+        TableInstance.fromMap({1: 1}),
+      );
       expect(
-          Table([
-            Field(value: Number(42)),
-            Field(value: LuaString('hello')),
-            Field(value: Bool(true))
-          ]).evaluate(),
-          TableInstance.fromMap({1: 42, 2: 'hello', 3: true}));
+        Table([Field(value: Number(1)), Field(value: Number(2))]).evaluate(),
+        TableInstance.fromMap({1: 1, 2: 2}),
+      );
+      expect(
+        Table([
+          Field(value: Number(42)),
+          Field(value: LuaString('hello')),
+          Field(value: Bool(true)),
+        ]).evaluate(),
+        TableInstance.fromMap({1: 42, 2: 'hello', 3: true}),
+      );
     });
 
     test('named field tables', () {
-      expect(Table([Field(name: 'a', value: Number(1))]).evaluate(),
-          TableInstance.fromMap({'a': 1}));
       expect(
-          Table([
-            Field(name: 'name', value: LuaString('test')),
-            Field(name: 'age', value: Number(25))
-          ]).evaluate(),
-          TableInstance.fromMap({'name': 'test', 'age': 25}));
+        Table([Field(name: 'a', value: Number(1))]).evaluate(),
+        TableInstance.fromMap({'a': 1}),
+      );
+      expect(
+        Table([
+          Field(name: 'name', value: LuaString('test')),
+          Field(name: 'age', value: Number(25)),
+        ]).evaluate(),
+        TableInstance.fromMap({'name': 'test', 'age': 25}),
+      );
     });
 
     test('indexed field tables', () {
       expect(
-          Table([Field(index: Number(1), value: LuaString('first'))])
-              .evaluate(),
-          TableInstance.fromMap({1: 'first'}));
+        Table([Field(index: Number(1), value: LuaString('first'))]).evaluate(),
+        TableInstance.fromMap({1: 'first'}),
+      );
       expect(
-          Table([
-            Field(index: LuaString('key1'), value: Number(1)),
-            Field(index: LuaString('key2'), value: Number(2))
-          ]).evaluate(),
-          TableInstance.fromMap({'key1': 1, 'key2': 2}));
+        Table([
+          Field(index: LuaString('key1'), value: Number(1)),
+          Field(index: LuaString('key2'), value: Number(2)),
+        ]).evaluate(),
+        TableInstance.fromMap({'key1': 1, 'key2': 2}),
+      );
     });
 
     test('mixed table syntax', () {
       expect(
-          Table([
-            Field(value: Number(1)),
-            Field(name: 'a', value: Number(2)),
-            Field(index: Number(3), value: LuaString('third'))
-          ]).evaluate(),
-          TableInstance.fromMap({1: 1, 'a': 2, 3: 'third'}));
+        Table([
+          Field(value: Number(1)),
+          Field(name: 'a', value: Number(2)),
+          Field(index: Number(3), value: LuaString('third')),
+        ]).evaluate(),
+        TableInstance.fromMap({1: 1, 'a': 2, 3: 'third'}),
+      );
 
       expect(
-          Table([
-            Field(value: LuaString('first')),
-            Field(value: LuaString('second')),
-            Field(name: 'named', value: Number(42)),
-            Field(index: LuaString('key'), value: Bool(true))
-          ]).evaluate(),
-          TableInstance.fromMap(
-              {1: 'first', 2: 'second', 'named': 42, 'key': true}));
+        Table([
+          Field(value: LuaString('first')),
+          Field(value: LuaString('second')),
+          Field(name: 'named', value: Number(42)),
+          Field(index: LuaString('key'), value: Bool(true)),
+        ]).evaluate(),
+        TableInstance.fromMap({
+          1: 'first',
+          2: 'second',
+          'named': 42,
+          'key': true,
+        }),
+      );
     });
 
     test('nested tables', () {
-      expect(Table([Field(value: Table([]))]).evaluate(),
-          TableInstance.fromMap({1: TableInstance()}));
+      expect(
+        Table([Field(value: Table([]))]).evaluate(),
+        TableInstance.fromMap({1: TableInstance()}),
+      );
 
       final inner1 = TableInstance.fromMap({1: 1});
       final inner2 = TableInstance.fromMap({1: 2});
       expect(
-          Table([
-            Field(value: Table([Field(value: Number(1))])),
-            Field(value: Table([Field(value: Number(2))]))
-          ]).evaluate(),
-          TableInstance.fromMap({1: inner1, 2: inner2}));
+        Table([
+          Field(value: Table([Field(value: Number(1))])),
+          Field(value: Table([Field(value: Number(2))])),
+        ]).evaluate(),
+        TableInstance.fromMap({1: inner1, 2: inner2}),
+      );
 
       final nestedTable = TableInstance.fromMap({'value': 42});
       expect(
-          Table([
-            Field(
-                name: 'inner',
-                value: Table([Field(name: 'value', value: Number(42))]))
-          ]).evaluate(),
-          TableInstance.fromMap({'inner': nestedTable}));
+        Table([
+          Field(
+            name: 'inner',
+            value: Table([Field(name: 'value', value: Number(42))]),
+          ),
+        ]).evaluate(),
+        TableInstance.fromMap({'inner': nestedTable}),
+      );
     });
 
     test('table with variable references', () {
       final env = LuaEnv(
-          variables: {'x': 10, 'y': 'hello', 'key': 'mykey', 'value': 99});
-
-      expect(Table([Field(value: VarRef('x'))]).evaluate(env: env),
-          TableInstance.fromMap({1: 10}));
-
-      expect(Table([Field(name: 'a', value: VarRef('y'))]).evaluate(env: env),
-          TableInstance.fromMap({'a': 'hello'}));
+        variables: {'x': 10, 'y': 'hello', 'key': 'mykey', 'value': 99},
+      );
 
       expect(
-          Table([Field(index: VarRef('key'), value: VarRef('value'))])
-              .evaluate(env: env),
-          TableInstance.fromMap({'mykey': 99}));
+        Table([Field(value: VarRef('x'))]).evaluate(env: env),
+        TableInstance.fromMap({1: 10}),
+      );
+
+      expect(
+        Table([Field(name: 'a', value: VarRef('y'))]).evaluate(env: env),
+        TableInstance.fromMap({'a': 'hello'}),
+      );
+
+      expect(
+        Table([
+          Field(index: VarRef('key'), value: VarRef('value')),
+        ]).evaluate(env: env),
+        TableInstance.fromMap({'mykey': 99}),
+      );
     });
 
     test('table assignments', () {
@@ -299,37 +334,46 @@ void main() {
 
       final block = Block([
         Assign.single(
-            'config',
-            Table([
-              Field(name: 'name', value: LuaString('app')),
-              Field(name: 'version', value: Number(1))
-            ]),
-            isLocal: true),
-        VarRef('config')
+          'config',
+          Table([
+            Field(name: 'name', value: LuaString('app')),
+            Field(name: 'version', value: Number(1)),
+          ]),
+          isLocal: true,
+        ),
+        VarRef('config'),
       ]);
-      expect(block.evaluate(),
-          TableInstance.fromMap({'name': 'app', 'version': 1}));
+      expect(
+        block.evaluate(),
+        TableInstance.fromMap({'name': 'app', 'version': 1}),
+      );
     });
 
     test('table length operation', () {
       expect(Length(Table([])).evaluate(), 0);
       expect(Length(Table([Field(value: Number(1))])).evaluate(), 1);
       expect(
-          Length(Table([
+        Length(
+          Table([
             Field(value: Number(1)),
             Field(value: Number(2)),
-            Field(value: Number(3))
-          ])).evaluate(),
-          3);
+            Field(value: Number(3)),
+          ]),
+        ).evaluate(),
+        3,
+      );
 
       // Length only counts fields, not distinguished by type
       expect(
-          Length(Table([
+        Length(
+          Table([
             Field(value: Number(1)),
             Field(name: 'a', value: Number(2)),
-            Field(index: LuaString('key'), value: Number(3))
-          ])).evaluate(),
-          3);
+            Field(index: LuaString('key'), value: Number(3)),
+          ]),
+        ).evaluate(),
+        3,
+      );
     });
 
     test('complex table expressions', () {
@@ -337,28 +381,32 @@ void main() {
 
       final block = Block([
         Assign.single(
-            'data',
-            Table([
-              Field(
-                  name: 'values',
-                  value: Table([
-                    Field(value: Number(1)),
-                    Field(value: Number(2)),
-                    Field(value: Number(3))
-                  ])),
-              Field(
-                  name: 'config',
-                  value: Table(
-                      [Field(name: 'scale', value: VarRef('multiplier'))]))
-            ]),
-            isLocal: true),
-        VarRef('data')
+          'data',
+          Table([
+            Field(
+              name: 'values',
+              value: Table([
+                Field(value: Number(1)),
+                Field(value: Number(2)),
+                Field(value: Number(3)),
+              ]),
+            ),
+            Field(
+              name: 'config',
+              value: Table([Field(name: 'scale', value: VarRef('multiplier'))]),
+            ),
+          ]),
+          isLocal: true,
+        ),
+        VarRef('data'),
       ]);
 
       final expectedInnerValues = TableInstance.fromMap({1: 1, 2: 2, 3: 3});
       final expectedInnerConfig = TableInstance.fromMap({'scale': 2});
-      final expectedResult = TableInstance.fromMap(
-          {'values': expectedInnerValues, 'config': expectedInnerConfig});
+      final expectedResult = TableInstance.fromMap({
+        'values': expectedInnerValues,
+        'config': expectedInnerConfig,
+      });
 
       expect(block.evaluate(env: env), expectedResult);
     });
@@ -370,12 +418,14 @@ void main() {
       expect(table1, table2);
 
       // Two identical tables with values
-      final table3 =
-          Table([Field(name: 'a', value: Number(1)), Field(value: Number(2))])
-              .evaluate();
-      final table4 =
-          Table([Field(name: 'a', value: Number(1)), Field(value: Number(2))])
-              .evaluate();
+      final table3 = Table([
+        Field(name: 'a', value: Number(1)),
+        Field(value: Number(2)),
+      ]).evaluate();
+      final table4 = Table([
+        Field(name: 'a', value: Number(1)),
+        Field(value: Number(2)),
+      ]).evaluate();
       expect(table3, table4);
 
       // Different tables
@@ -387,9 +437,11 @@ void main() {
 
   group('table indexing evaluation', () {
     test('basic table indexing with numbers', () {
-      final env = LuaEnv(variables: {
-        'table': TableInstance.fromMap({1: 'first', 2: 'second', 3: 'third'})
-      });
+      final env = LuaEnv(
+        variables: {
+          'table': TableInstance.fromMap({1: 'first', 2: 'second', 3: 'third'}),
+        },
+      );
 
       expect(Index(VarRef('table'), Number(1)).evaluate(env: env), 'first');
       expect(Index(VarRef('table'), Number(2)).evaluate(env: env), 'second');
@@ -397,111 +449,150 @@ void main() {
     });
 
     test('basic table indexing with string keys', () {
-      final env = LuaEnv(variables: {
-        'table':
-            TableInstance.fromMap({'name': 'John', 'age': 30, 'city': 'NYC'})
-      });
+      final env = LuaEnv(
+        variables: {
+          'table': TableInstance.fromMap({
+            'name': 'John',
+            'age': 30,
+            'city': 'NYC',
+          }),
+        },
+      );
 
       expect(
-          Index(VarRef('table'), LuaString('name')).evaluate(env: env), 'John');
+        Index(VarRef('table'), LuaString('name')).evaluate(env: env),
+        'John',
+      );
       expect(Index(VarRef('table'), LuaString('age')).evaluate(env: env), 30);
       expect(
-          Index(VarRef('table'), LuaString('city')).evaluate(env: env), 'NYC');
+        Index(VarRef('table'), LuaString('city')).evaluate(env: env),
+        'NYC',
+      );
     });
 
     test('field access with dot notation', () {
-      final env = LuaEnv(variables: {
-        'table': TableInstance.fromMap({
-          'name': 'Alice',
-          'score': 95,
-        })
-      });
+      final env = LuaEnv(
+        variables: {
+          'table': TableInstance.fromMap({'name': 'Alice', 'score': 95}),
+        },
+      );
 
       expect(FieldAccess(VarRef('table'), 'name').evaluate(env: env), 'Alice');
       expect(FieldAccess(VarRef('table'), 'score').evaluate(env: env), 95);
     });
 
     test('nested table indexing', () {
-      final env = LuaEnv(variables: {
-        'table': TableInstance.fromMap({
-          'point': TableInstance.fromMap({'x': 10, 'y': 20}),
-          1: 42,
-        })
-      });
+      final env = LuaEnv(
+        variables: {
+          'table': TableInstance.fromMap({
+            'point': TableInstance.fromMap({'x': 10, 'y': 20}),
+            1: 42,
+          }),
+        },
+      );
 
       expect(
-          FieldAccess(FieldAccess(VarRef('table'), 'point'), 'x')
-              .evaluate(env: env),
-          10);
+        FieldAccess(
+          FieldAccess(VarRef('table'), 'point'),
+          'x',
+        ).evaluate(env: env),
+        10,
+      );
       expect(
-          FieldAccess(FieldAccess(VarRef('table'), 'point'), 'y')
-              .evaluate(env: env),
-          20);
+        FieldAccess(
+          FieldAccess(VarRef('table'), 'point'),
+          'y',
+        ).evaluate(env: env),
+        20,
+      );
       expect(Index(VarRef('table'), Number(1)).evaluate(env: env), 42);
     });
 
     test('indexing with variable keys', () {
-      final env = LuaEnv(variables: {
-        'table': TableInstance.fromMap({'key1': 'value1', 'key2': 'value2'}),
-        'k1': 'key1',
-        'k2': 'key2',
-      });
+      final env = LuaEnv(
+        variables: {
+          'table': TableInstance.fromMap({'key1': 'value1', 'key2': 'value2'}),
+          'k1': 'key1',
+          'k2': 'key2',
+        },
+      );
 
       expect(Index(VarRef('table'), VarRef('k1')).evaluate(env: env), 'value1');
       expect(Index(VarRef('table'), VarRef('k2')).evaluate(env: env), 'value2');
     });
 
     test('indexing non-existent keys returns nil', () {
-      final env = LuaEnv(variables: {
-        'table': TableInstance.fromMap({'existing': 1})
-      });
+      final env = LuaEnv(
+        variables: {
+          'table': TableInstance.fromMap({'existing': 1}),
+        },
+      );
 
-      expect(Index(VarRef('table'), LuaString('missing')).evaluate(env: env),
-          null);
+      expect(
+        Index(VarRef('table'), LuaString('missing')).evaluate(env: env),
+        null,
+      );
       expect(FieldAccess(VarRef('table'), 'missing').evaluate(env: env), null);
     });
 
     test('mixed indexing and field access', () {
-      final env = LuaEnv(variables: {
-        'table': TableInstance.fromMap({
-          'data': TableInstance.fromMap({1: 'item1', 2: 'item2'}),
-          'config': TableInstance.fromMap({'enabled': true}),
-        })
-      });
+      final env = LuaEnv(
+        variables: {
+          'table': TableInstance.fromMap({
+            'data': TableInstance.fromMap({1: 'item1', 2: 'item2'}),
+            'config': TableInstance.fromMap({'enabled': true}),
+          }),
+        },
+      );
 
       expect(
-          Index(FieldAccess(VarRef('table'), 'data'), Number(1))
-              .evaluate(env: env),
-          'item1');
+        Index(
+          FieldAccess(VarRef('table'), 'data'),
+          Number(1),
+        ).evaluate(env: env),
+        'item1',
+      );
       expect(
-          FieldAccess(FieldAccess(VarRef('table'), 'config'), 'enabled')
-              .evaluate(env: env),
-          true);
+        FieldAccess(
+          FieldAccess(VarRef('table'), 'config'),
+          'enabled',
+        ).evaluate(env: env),
+        true,
+      );
     });
 
     test('error on indexing non-table values', () {
-      expect(() => Index(Number(42), Number(1)).evaluate(),
-          throwsA(isA<EvaluationException>()));
-      expect(() => FieldAccess(LuaString('not_a_table'), 'field').evaluate(),
-          throwsA(isA<EvaluationException>()));
+      expect(
+        () => Index(Number(42), Number(1)).evaluate(),
+        throwsA(isA<EvaluationException>()),
+      );
+      expect(
+        () => FieldAccess(LuaString('not_a_table'), 'field').evaluate(),
+        throwsA(isA<EvaluationException>()),
+      );
     });
 
     test('complex table access patterns', () {
-      final env = LuaEnv(variables: {
-        'users': TableInstance.fromMap({
-          1: TableInstance.fromMap({'name': 'Alice', 'id': 101}),
-          2: TableInstance.fromMap({'name': 'Bob', 'id': 102}),
-        })
-      });
+      final env = LuaEnv(
+        variables: {
+          'users': TableInstance.fromMap({
+            1: TableInstance.fromMap({'name': 'Alice', 'id': 101}),
+            2: TableInstance.fromMap({'name': 'Bob', 'id': 102}),
+          }),
+        },
+      );
 
       expect(
-          FieldAccess(Index(VarRef('users'), Number(1)), 'name')
-              .evaluate(env: env),
-          'Alice');
+        FieldAccess(
+          Index(VarRef('users'), Number(1)),
+          'name',
+        ).evaluate(env: env),
+        'Alice',
+      );
       expect(
-          FieldAccess(Index(VarRef('users'), Number(2)), 'id')
-              .evaluate(env: env),
-          102);
+        FieldAccess(Index(VarRef('users'), Number(2)), 'id').evaluate(env: env),
+        102,
+      );
     });
   });
 
@@ -529,10 +620,10 @@ void main() {
       final result = If(
         VarRef('condition'),
         Block([
-          Return(values: [Number(1)])
+          Return(values: [Number(1)]),
         ]),
         elseBlock: Block([
-          Return(values: [Number(2)])
+          Return(values: [Number(2)]),
         ]),
       ).evaluate(env: env);
       expect(result, 2);
@@ -543,17 +634,18 @@ void main() {
       final result = If(
         VarRef('x'),
         Block([
-          Return(values: [Number(1)])
+          Return(values: [Number(1)]),
         ]),
         elseIfs: [
           ElseIf(
-              VarRef('y'),
-              Block([
-                Return(values: [Number(2)])
-              ]))
+            VarRef('y'),
+            Block([
+              Return(values: [Number(2)]),
+            ]),
+          ),
         ],
         elseBlock: Block([
-          Return(values: [Number(3)])
+          Return(values: [Number(3)]),
         ]),
       ).evaluate(env: env);
       expect(result, 2);
@@ -617,10 +709,7 @@ void main() {
           init: Number(1),
           stop: Number(10),
           block: Block([
-            If(
-              Greater(VarRef('i'), Number(3)),
-              Block([Break()]),
-            ),
+            If(Greater(VarRef('i'), Number(3)), Block([Break()])),
             Assign.single('sum', Add([VarRef('sum'), VarRef('i')])),
           ]),
         ),
@@ -635,9 +724,11 @@ void main() {
           'add',
           ['a', 'b'],
           Block([
-            Return(values: [
-              Add([VarRef('a'), VarRef('b')])
-            ])
+            Return(
+              values: [
+                Add([VarRef('a'), VarRef('b')]),
+              ],
+            ),
           ]),
         ),
         Call('add', [Number(5), Number(3)]),
@@ -651,9 +742,11 @@ void main() {
           'multiply',
           ['x', 'y'],
           Block([
-            Return(values: [
-              Multiply([VarRef('x'), VarRef('y')])
-            ])
+            Return(
+              values: [
+                Multiply([VarRef('x'), VarRef('y')]),
+              ],
+            ),
           ]),
           isLocal: true,
         ),
@@ -668,7 +761,7 @@ void main() {
           'getConstant',
           [],
           Block([
-            Return(values: [Number(42)])
+            Return(values: [Number(42)]),
           ]),
         ),
         Call('getConstant', []),
@@ -682,7 +775,7 @@ void main() {
           'first',
           ['a'],
           Block([
-            Return(values: [VarRef('a')])
+            Return(values: [VarRef('a')]),
           ]),
         ),
         Call('first', [Number(1), Number(2), Number(3)]),
@@ -699,12 +792,14 @@ void main() {
             If(
               Equals(VarRef('b'), Nil()),
               Block([
-                Return(values: [VarRef('a')])
+                Return(values: [VarRef('a')]),
               ]),
               elseBlock: Block([
-                Return(values: [
-                  Add([VarRef('a'), VarRef('b')])
-                ])
+                Return(
+                  values: [
+                    Add([VarRef('a'), VarRef('b')]),
+                  ],
+                ),
               ]),
             ),
           ]),
@@ -723,15 +818,17 @@ void main() {
             If(
               Less(VarRef('n'), Number(2)),
               Block([
-                Return(values: [Number(1)])
+                Return(values: [Number(1)]),
               ]),
               elseBlock: Block([
-                Return(values: [
-                  Multiply([
-                    VarRef('n'),
-                    Call('factorial', [Subtract(VarRef('n'), Number(1))])
-                  ])
-                ])
+                Return(
+                  values: [
+                    Multiply([
+                      VarRef('n'),
+                      Call('factorial', [Subtract(VarRef('n'), Number(1))]),
+                    ]),
+                  ],
+                ),
               ]),
             ),
           ]),

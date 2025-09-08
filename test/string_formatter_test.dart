@@ -15,13 +15,17 @@ void main() {
       expect(format(LuaString('tab\there')), contains('tab'));
       expect(format(LuaString('quote"here')), contains(r'quote\"here'));
       expect(
-          format(LuaString(r'backslash\here')), contains(r'backslash\\here'));
+        format(LuaString(r'backslash\here')),
+        contains(r'backslash\\here'),
+      );
     });
 
     test('strings with various content are handled', () {
       expect(format(LuaString('single\'quote')), '"single\'quote"');
-      expect(format(LuaString('mixed "quotes" and \'apostrophes\'')),
-          contains('mixed \\"quotes\\" and \'apostrophes\''));
+      expect(
+        format(LuaString('mixed "quotes" and \'apostrophes\'')),
+        contains('mixed \\"quotes\\" and \'apostrophes\''),
+      );
     });
 
     test('multiline strings are formatted properly', () {

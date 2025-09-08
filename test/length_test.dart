@@ -202,7 +202,9 @@ void main() {
         final env = LuaEnv.withStdlib();
 
         expect(
-            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+          () => ast.evaluate(env: env),
+          throwsA(isA<EvaluationException>()),
+        );
       });
 
       test('length of boolean should throw error', () {
@@ -212,7 +214,9 @@ void main() {
         final env = LuaEnv.withStdlib();
 
         expect(
-            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+          () => ast.evaluate(env: env),
+          throwsA(isA<EvaluationException>()),
+        );
       });
 
       test('length of nil should throw error', () {
@@ -222,7 +226,9 @@ void main() {
         final env = LuaEnv.withStdlib();
 
         expect(
-            () => ast.evaluate(env: env), throwsA(isA<EvaluationException>()));
+          () => ast.evaluate(env: env),
+          throwsA(isA<EvaluationException>()),
+        );
       });
     });
 

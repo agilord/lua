@@ -149,19 +149,21 @@ void main() {
       final result = ast.evaluate();
 
       expect(
-          result,
-          TableInstance.fromMap({
-            'config': TableInstance.fromMap({'x': 1, 'y': 2})
-          }));
+        result,
+        TableInstance.fromMap({
+          'config': TableInstance.fromMap({'x': 1, 'y': 2}),
+        }),
+      );
     });
   });
 
   group('comma-level comment formatting tests', () {
     test('format field with combined field and comma comments', () {
       final field = Field(
-          name: 'test',
-          value: Number(42),
-          comment: 'field comment, comma comment');
+        name: 'test',
+        value: Number(42),
+        comment: 'field comment, comma comment',
+      );
       final table = Table([field]);
       final formatted = format(table);
 
