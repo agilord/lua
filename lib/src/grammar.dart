@@ -289,7 +289,9 @@ class LuaGrammarDefinition extends GrammarDefinition {
           ));
 
   Parser<Statement> callStatement() {
-    return ref0(postfixExpression).where((expr) => expr is Call).cast<Call>();
+    return ref0(postfixExpression)
+        .where((expr) => expr is Call || expr is CallFieldAccess)
+        .cast<Statement>();
   }
 
   Parser<Number> number() => token(
