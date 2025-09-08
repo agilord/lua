@@ -70,7 +70,7 @@ class _LuaFormatter extends Visitor<_Code> {
   // Helper method to add comment to code if present
   _Code _addComment(_Code code, String? comment) {
     if (comment != null && comment.isNotEmpty) {
-      return code.postfixLast(' --$comment');
+      return code.postfixLast('; --$comment');
     }
     return code;
   }
@@ -116,6 +116,13 @@ class _LuaFormatter extends Visitor<_Code> {
   _Code visitCallExpression(CallExpression value) =>
       _Code.compose('(', [value.function.visit(this)], '', ')').joinInline(
           _Code.compose('(', value.args.map((e) => e.visit(this)), ', ', ')'));
+
+  @override
+  _Code visitCallFieldAccess(CallFieldAccess value) {
+    final code = value.fieldAccess.visit(this).joinInline(
+        _Code.compose('(', value.args.map((e) => e.visit(this)), ', ', ')'));
+    return _addComment(code, value.comment);
+  }
 
   @override
   _Code visitDo(Do value) =>

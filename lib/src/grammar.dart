@@ -23,20 +23,43 @@ class LuaGrammarDefinition extends GrammarDefinition {
   Parser token(Parser parser) => parser.flatten().trim();
 
   Parser<Block> block() {
-    // Custom block parser that handles newline-consuming statements
-    final separator = (char(';') | char('\n')).optional();
-    return (ref0(statement) & separator).star().map((pairs) {
-      final statements = <Statement>[];
-      for (final pair in pairs) {
-        statements.add(pair[0] as Statement);
-      }
+    // Simplified block parser: statements separated by newlines or semicolons
+    final separator = (char(';') | char('\n')).star();
+
+    return (separator & ref0(statement).starSeparated(separator) & separator)
+        .map((value) {
+      final separatedList = value[1];
+      final statements = separatedList.elements.cast<Statement>();
       return Block(statements);
     });
   }
 
-  Parser<Statement> statement() => <Parser<Statement>>[
-        ref0(multiLineComment),
-        ref0(singleLineComment),
+  // Special parser for statements followed by semicolon and inline comment
+  Parser<Statement> statementWithInlineComment() =>
+      (ref0(basicStatement) & char(';').trim() & ref0(singleLineComment))
+          .map((value) {
+        final stmt = value[0] as Statement;
+        final comment = value[2] as SingleLineComment;
+        final commentText = comment.text.trim();
+
+        // Just return the statement with comment attached - simplified approach
+        if (stmt is Assign) {
+          return Assign(
+            stmt.names,
+            stmt.values,
+            isLocal: stmt.isLocal,
+            comment: commentText,
+          );
+        } else if (stmt is Return) {
+          return Return(values: stmt.values, comment: commentText);
+        } else if (stmt is Call) {
+          return Call(stmt.name, stmt.args, comment: commentText);
+        }
+        // For other types, just return the original statement
+        return stmt;
+      });
+
+  Parser<Statement> basicStatement() => <Parser<Statement>>[
         ref0(functionDef),
         ref0(ifStatement),
         ref0(whileStatement),
@@ -46,6 +69,13 @@ class LuaGrammarDefinition extends GrammarDefinition {
         ref0(breakStatement),
         ref0(assignment),
         ref0(callStatement),
+      ].toChoiceParser();
+
+  Parser<Statement> statement() => <Parser<Statement>>[
+        ref0(multiLineComment),
+        ref0(singleLineComment),
+        ref0(statementWithInlineComment), // Handle stmt; -- comment pattern
+        ref0(basicStatement), // All other statements
       ].toChoiceParser().map((value) => value);
 
   Parser<Expression> expression() => ref0(orExpression);
