@@ -383,14 +383,15 @@ class LuaGrammarDefinition extends GrammarDefinition {
                 ref0(expression) &
                 char(']').trim() &
                 char('=').trim() &
-                ref0(expression))
+                ref0(expression).trim())
             .map((value) => Field(
                 index: value[1] as Expression, value: value[4] as Expression)),
         // Named field: name = value
-        (ref0(name) & char('=').trim() & ref0(expression)).map((value) =>
-            Field(name: value[0] as String, value: value[2] as Expression)),
+        (ref0(name).trim() & char('=').trim() & ref0(expression).trim()).map(
+            (value) =>
+                Field(name: value[0] as String, value: value[2] as Expression)),
         // Array-style field: value (must come last)
-        ref0(expression).map((value) => Field(value: value)),
+        ref0(expression).trim().map((value) => Field(value: value)),
       ].toChoiceParser();
 
   Parser<String> identifier() => pattern('a-zA-Z_').plus().flatten().trim();

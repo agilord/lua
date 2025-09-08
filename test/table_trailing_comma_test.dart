@@ -170,7 +170,9 @@ void main() {
       expect(result, TableInstance.fromMap({'x': 10, 'y': 20}));
     });
 
-    test('parse complex multi-line table with trailing comment', () {
+    test(
+        'parse complex multi-line table with nested table and trailing comment',
+        () {
       final code =
           'return {\n  name = "config",\n  values = { 1, 2, 3 },\n  enabled = true\n}--settings';
       final ast = parse(code);
@@ -182,14 +184,18 @@ void main() {
       final returnStmt = ast.statements[0] as Return;
       final table = returnStmt.values?.first as Table;
       expect(table.fields.length, 3);
+      expect(table.fields[0].name, 'name');
+      expect(table.fields[1].name, 'values');
+      expect(table.fields[1].value, isA<Table>()); // Nested table
+      expect(table.fields[2].name, 'enabled');
 
       final comment = ast.statements[1] as SingleLineComment;
       expect(comment.text, 'settings');
     });
 
-    test('evaluate complex multi-line table with comment', () {
+    test('evaluate complex multi-line table with nested table and comment', () {
       final code =
-          'return {\n  title = "test",\n  count = 42,\n  active = true,\n}--metadata';
+          'return {\n  title = "test",\n  items = { "a", "b", "c" },\n  active = true,\n}--metadata';
       final ast = parse(code);
       final result = ast.evaluate();
 
@@ -197,7 +203,7 @@ void main() {
           result,
           TableInstance.fromMap({
             'title': 'test',
-            'count': 42,
+            'items': TableInstance.fromMap({1: 'a', 2: 'b', 3: 'c'}),
             'active': true,
           }));
     });
@@ -309,17 +315,20 @@ void main() {
       expect(ast3.statements.length, 2);
       expect(ast3.statements[1], isA<SingleLineComment>());
 
-      // LIMITATION: Nested tables are not yet supported by the parser
-      // This would need grammar extensions: 'return { inner = { x = 1 } }'
+      // NOW SUPPORTED: Nested tables work correctly
+      final code4 = 'return { inner = { x = 1 } }--nested';
+      final ast4 = parse(code4);
+      expect(ast4.statements.length, 2);
+      expect(ast4.statements[1], isA<SingleLineComment>());
 
-      // LIMITATION: String values in tables have parsing issues
-      // This would need parser fixes: 'return { name = "value" }'
+      // NOW SUPPORTED: String values in tables work correctly
+      final code5 = 'return { name = "value" }--strings';
+      final ast5 = parse(code5);
+      expect(ast5.statements.length, 2);
+      expect(ast5.statements[1], isA<SingleLineComment>());
 
       // LIMITATION: Field-level inline comments are not yet supported
       // This would need grammar extensions: 'return { a = 1, -- comment\n  b = 2 }'
-
-      print(
-          '✅ Table trailing comment support is working for numeric field tables');
     });
   });
 }
